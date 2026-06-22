@@ -18,6 +18,7 @@ import {
   capitalizeStatus,
   formatDate,
   formatMoney,
+  statusApi,
   statusBadgeClass,
 } from "@/lib/services";
 
@@ -40,6 +41,28 @@ export default function BookingsPage() {
   const [data, setData] = useState<BookingRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [statusOptions, setStatusOptions] = useState<
+    { value: string; label: string }[]
+  >([
+    { value: "pending", label: "Pending" },
+    { value: "confirmed", label: "Confirmed" },
+    { value: "completed", label: "Completed" },
+    { value: "cancelled", label: "Cancelled" },
+  ]);
+
+  useEffect(() => {
+    statusApi
+      .list()
+      .then(({ statuses }) =>
+        setStatusOptions(
+          statuses.map((s) => ({
+            value: s.key,
+            label: capitalizeStatus(s.key),
+          })),
+        ),
+      )
+      .catch(() => undefined);
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -70,6 +93,16 @@ export default function BookingsPage() {
       await load();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Cancel failed");
+    }
+  }
+
+  async function handleDelete(id: number) {
+    if (!confirm("Permanently delete this booking?")) return;
+    try {
+      await bookingsApi.remove(id);
+      await load();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Delete failed");
     }
   }
 
@@ -142,6 +175,13 @@ export default function BookingsPage() {
                 Cancel
               </Button>
             )}
+            <Button
+              size="sm"
+              variant="danger"
+              onClick={() => handleDelete(row.id)}
+            >
+              Delete
+            </Button>
             {mobile && (
               <a
                 href={`https://wa.me/91${mobile.replace(/\D/g, "")}`}
@@ -193,12 +233,7 @@ export default function BookingsPage() {
           <div className="w-full lg:w-48">
             <Select
               label="Status"
-              options={[
-                { value: "pending", label: "Pending" },
-                { value: "confirmed", label: "Confirmed" },
-                { value: "completed", label: "Completed" },
-                { value: "cancelled", label: "Cancelled" },
-              ]}
+              options={statusOptions}
               value={status}
               onChange={(e) => setStatus(e.target.value)}
             />

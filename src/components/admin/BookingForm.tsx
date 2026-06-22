@@ -17,6 +17,7 @@ import {
   citiesApi,
   customersApi,
   driversApi,
+  statusApi,
 } from "@/lib/services";
 
 type BookingFormProps = {
@@ -72,8 +73,28 @@ export function BookingForm({
   const [driverOptions, setDriverOptions] = useState<
     { value: string; label: string }[]
   >([]);
+  const [statusOptions, setStatusOptions] = useState<
+    { value: string; label: string }[]
+  >([
+    { value: "pending", label: "Pending" },
+    { value: "confirmed", label: "Confirmed" },
+    { value: "completed", label: "Completed" },
+    { value: "cancelled", label: "Cancelled" },
+  ]);
 
   useEffect(() => {
+    statusApi
+      .list()
+      .then(({ statuses }) =>
+        setStatusOptions(
+          statuses.map((s) => ({
+            value: s.key,
+            label: s.name.charAt(0) + s.name.slice(1).toLowerCase(),
+          })),
+        ),
+      )
+      .catch(() => undefined);
+
     Promise.all([
       branchesApi.list({ limit: 100 }),
       customersApi.list({ limit: 500 }),
@@ -217,7 +238,7 @@ export function BookingForm({
             label="Car Of"
             options={[
               { value: "own", label: "Own Car" },
-              { value: "vendor", label: "Vendor Car" },
+              { value: "rented", label: "Vendor Car" },
             ]}
             value={form.car_of}
             onChange={(e) => setField("car_of", e.target.value)}
@@ -333,12 +354,7 @@ export function BookingForm({
           />
           <Select
             label="Status"
-            options={[
-              { value: "pending", label: "Pending" },
-              { value: "confirmed", label: "Confirmed" },
-              { value: "completed", label: "Completed" },
-              { value: "cancelled", label: "Cancelled" },
-            ]}
+            options={statusOptions}
             value={form.status}
             onChange={(e) => setField("status", e.target.value)}
           />

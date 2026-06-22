@@ -50,9 +50,16 @@ async function deleteResource(path: string, id: number | string) {
   await api(`${path}/${id}`, { method: "DELETE" });
 }
 
+// Status
+export const statusApi = {
+  list: () =>
+    api<{ statuses: { key: string; name: string }[] }>("/get-status-list"),
+};
+
 // Masters
 export const statesApi = {
   list: (p?: ListParams) => listResource<{ id: number; name: string }>("/states", "states", p),
+  get: (id: number) => getResource<{ id: number; name: string }>("/states", "state", id),
   create: (body: { name: string }) => createResource("/states", "state", body),
   update: (id: number, body: { name: string }) =>
     updateResource("/states", "state", id, body),
@@ -67,6 +74,13 @@ export const citiesApi = {
       state_id: number;
       state?: { id: number; name: string };
     }>("/cities", "cities", p),
+  get: (id: number) =>
+    getResource<{
+      id: number;
+      name: string;
+      state_id: number;
+      state?: { id: number; name: string };
+    }>("/cities", "city", id),
   create: (body: { name: string; state_id: number }) =>
     createResource("/cities", "city", body),
   update: (id: number, body: { name: string; state_id: number }) =>
@@ -77,6 +91,8 @@ export const citiesApi = {
 export const carTypesApi = {
   list: (p?: ListParams) =>
     listResource<{ id: number; name: string }>("/car-types", "carTypes", p),
+  get: (id: number) =>
+    getResource<{ id: number; name: string }>("/car-types", "carType", id),
   create: (body: { name: string }) =>
     createResource("/car-types", "carType", body),
   update: (id: number, body: { name: string }) =>
@@ -87,6 +103,8 @@ export const carTypesApi = {
 export const vendorsApi = {
   list: (p?: ListParams) =>
     listResource<{ id: number; name: string; mobile: string }>("/vendors", "vendors", p),
+  get: (id: number) =>
+    getResource<{ id: number; name: string; mobile: string }>("/vendors", "vendor", id),
   create: (body: { name: string; mobile: string }) =>
     createResource("/vendors", "vendor", body),
   update: (id: number, body: { name: string; mobile: string }) =>
@@ -102,6 +120,13 @@ export const driversApi = {
       mobile: string;
       license_number?: string;
     }>("/drivers", "drivers", p),
+  get: (id: number) =>
+    getResource<{
+      id: number;
+      name: string;
+      mobile: string;
+      license_number?: string;
+    }>("/drivers", "driver", id),
   create: (body: Record<string, unknown>) =>
     createResource("/drivers", "driver", body),
   update: (id: number, body: Record<string, unknown>) =>
@@ -112,6 +137,7 @@ export const driversApi = {
 export const carsApi = {
   list: (p?: ListParams) =>
     listResource<Record<string, unknown>>("/cars", "cars", p),
+  get: (id: number) => getResource<Record<string, unknown>>("/cars", "car", id),
   create: (body: Record<string, unknown>) =>
     createResource("/cars", "car", body),
   update: (id: number, body: Record<string, unknown>) =>
@@ -127,6 +153,13 @@ export const customersApi = {
       mobile: string;
       whatsapp?: string;
     }>("/customers", "customers", p),
+  get: (id: number) =>
+    getResource<{
+      id: number;
+      name: string;
+      mobile: string;
+      whatsapp?: string;
+    }>("/customers", "customer", id),
   create: (body: Record<string, unknown>) =>
     createResource("/customers", "customer", body),
   update: (id: number, body: Record<string, unknown>) =>
@@ -137,6 +170,7 @@ export const customersApi = {
 export const usersApi = {
   list: (p?: ListParams) =>
     listResource<Record<string, unknown>>("/users", "users", p),
+  get: (id: number) => getResource<Record<string, unknown>>("/users", "user", id),
   create: (body: Record<string, unknown>) =>
     createResource("/users", "user", body),
   update: (id: number, body: Record<string, unknown>) =>
@@ -157,7 +191,22 @@ export const rolesApi = {
 
 export const branchesApi = {
   list: (p?: ListParams) =>
-    listResource<{ id: number; name: string }>("/branches", "branches", p),
+    listResource<{ id: number; name: string; tenant_id?: number }>(
+      "/branches",
+      "branches",
+      p,
+    ),
+  get: (id: number) =>
+    getResource<{ id: number; name: string; tenant_id?: number }>(
+      "/branches",
+      "branch",
+      id,
+    ),
+  create: (body: { name: string; tenant_id: number }) =>
+    createResource("/branches", "branch", body),
+  update: (id: number, body: { name: string }) =>
+    updateResource("/branches", "branch", id, body),
+  remove: (id: number) => deleteResource("/branches", id),
 };
 
 // Bookings
@@ -172,12 +221,15 @@ export const bookingsApi = {
     updateResource<Booking>("/bookings", "booking", id, body),
   cancel: (id: number) =>
     api(`/bookings/${id}/cancel`, { method: "PATCH" }),
+  remove: (id: number) => deleteResource("/bookings", id),
 };
 
 // Payments
 export const paymentsApi = {
   list: (p?: ListParams) =>
     listResource<Record<string, unknown>>("/payments", "payments", p),
+  get: (id: number) =>
+    getResource<Record<string, unknown>>("/payments", "payment", id),
   create: (body: Record<string, unknown>) =>
     createResource("/payments", "payment", body),
   update: (id: number, body: Record<string, unknown>) =>
@@ -197,6 +249,8 @@ export const paymentsApi = {
 export const incomeExpensesApi = {
   list: (p?: ListParams) =>
     listResource<Record<string, unknown>>("/income-expenses", "incomeExpenses", p),
+  get: (id: number) =>
+    getResource<Record<string, unknown>>("/income-expenses", "incomeExpense", id),
   create: (body: Record<string, unknown>) =>
     createResource("/income-expenses", "incomeExpense", body),
   update: (id: number, body: Record<string, unknown>) =>
