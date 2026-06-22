@@ -1,0 +1,227 @@
+"use client";
+
+import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
+import { ApiError } from "@/lib/api";
+import {
+  Alert,
+  Button,
+  Card,
+  DataTable,
+  type Column,
+  Input,
+  PageHeader,
+  Select,
+} from "@/components/admin";
+import {
+  bookingsApi,
+  capitalizeStatus,
+  formatDate,
+  formatMoney,
+  statusBadgeClass,
+} from "@/lib/services";
+
+type BookingRow = Record<string, unknown> & {
+  id: number;
+  ticket_no: string;
+  status: string;
+  booking_amount: number;
+  customer?: { name: string; mobile?: string; whatsapp?: string };
+  car?: { car_number: string };
+  fromCity?: { name: string };
+  toCity?: { name: string };
+  pickup_date: string;
+};
+
+export default function BookingsPage() {
+  const [search, setSearch] = useState("");
+  const [query, setQuery] = useState("");
+  const [status, setStatus] = useState("");
+  const [data, setData] = useState<BookingRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const rows = await bookingsApi.list({
+        search: query,
+        status: status || undefined,
+        limit: 100,
+      });
+      setData(rows as BookingRow[]);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Failed to load bookings");
+      setData([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [query, status]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  async function handleCancel(id: number) {
+    if (!confirm("Cancel this booking?")) return;
+    try {
+      await bookingsApi.cancel(id);
+      await load();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Cancel failed");
+    }
+  }
+
+  const columns: Column<BookingRow>[] = [
+    {
+      key: "ticket_no",
+      header: "Ticket",
+      className: "font-medium text-primary",
+    },
+    {
+      key: "customer",
+      header: "Customer",
+      render: (row) => row.customer?.name ?? "-",
+    },
+    {
+      key: "car",
+      header: "Car",
+      render: (row) => row.car?.car_number ?? "-",
+    },
+    {
+      key: "fromCity",
+      header: "From",
+      render: (row) => row.fromCity?.name ?? "-",
+    },
+    {
+      key: "toCity",
+      header: "To",
+      render: (row) => row.toCity?.name ?? "-",
+    },
+    {
+      key: "pickup_date",
+      header: "Pickup",
+      render: (row) => formatDate(row.pickup_date),
+    },
+    {
+      key: "status",
+      header: "Status",
+      render: (row) => (
+        <span
+          className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${statusBadgeClass(row.status)}`}
+        >
+          {capitalizeStatus(row.status)}
+        </span>
+      ),
+    },
+    {
+      key: "booking_amount",
+      header: "Amount",
+      className: "font-medium",
+      render: (row) => formatMoney(row.booking_amount),
+    },
+    {
+      key: "actions" as keyof BookingRow & string,
+      header: "Actions",
+      render: (row) => {
+        const mobile = row.customer?.whatsapp || row.customer?.mobile;
+        return (
+          <div className="flex flex-wrap gap-1">
+            <Link href={`/admin/bookings/${row.id}/edit`}>
+              <Button size="sm" variant="outline">
+                Edit
+              </Button>
+            </Link>
+            {row.status !== "cancelled" && (
+              <Button
+                size="sm"
+                variant="danger"
+                onClick={() => handleCancel(row.id)}
+              >
+                Cancel
+              </Button>
+            )}
+            {mobile && (
+              <a
+                href={`https://wa.me/91${mobile.replace(/\D/g, "")}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Button size="sm" variant="ghost">
+                  WhatsApp
+                </Button>
+              </a>
+            )}
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => window.print()}
+            >
+              Print
+            </Button>
+          </div>
+        );
+      },
+    },
+  ];
+
+  return (
+    <>
+      <PageHeader
+        title="Bookings"
+        description="Manage all car bookings"
+        action={{ label: "New Booking", href: "/admin/bookings/new" }}
+      />
+
+      {error && (
+        <Alert variant="danger" className="mb-4">
+          {error}
+        </Alert>
+      )}
+
+      <Card className="mb-4">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end">
+          <div className="flex-1">
+            <Input
+              label="Search"
+              placeholder="Search by ticket, customer..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          <div className="w-full lg:w-48">
+            <Select
+              label="Status"
+              options={[
+                { value: "pending", label: "Pending" },
+                { value: "confirmed", label: "Confirmed" },
+                { value: "completed", label: "Completed" },
+                { value: "cancelled", label: "Cancelled" },
+              ]}
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
+            />
+          </div>
+          <div className="flex gap-2">
+            <Button onClick={() => setQuery(search)}>Search</Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setSearch("");
+                setQuery("");
+                setStatus("");
+              }}
+            >
+              Reset
+            </Button>
+          </div>
+        </div>
+      </Card>
+
+      <Card padding="none">
+        <DataTable columns={columns} data={data} loading={loading} />
+      </Card>
+    </>
+  );
+}
