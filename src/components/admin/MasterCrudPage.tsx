@@ -32,6 +32,7 @@ interface MasterCrudPageProps<T extends Record<string, unknown>> {
   getEditValues?: (row: T) => Record<string, string>;
   searchPlaceholder?: string;
   renderExtra?: ReactNode;
+  onOpenModal?: () => void;
 }
 
 export function MasterCrudPage<T extends Record<string, unknown>>({
@@ -46,6 +47,7 @@ export function MasterCrudPage<T extends Record<string, unknown>>({
   getEditValues,
   searchPlaceholder = "Search records...",
   renderExtra,
+  onOpenModal,
 }: MasterCrudPageProps<T>) {
   const [search, setSearch] = useState("");
   const [query, setQuery] = useState("");
@@ -75,12 +77,14 @@ export function MasterCrudPage<T extends Record<string, unknown>>({
   }, [load]);
 
   function openCreate() {
+    onOpenModal?.();
     setEditingId(null);
     setForm(Object.fromEntries(fields.map((f) => [f.name, ""])));
     setModalOpen(true);
   }
 
   function openEdit(row: T) {
+    onOpenModal?.();
     const id = Number(row.id);
     setEditingId(id);
     setForm(

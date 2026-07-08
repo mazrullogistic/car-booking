@@ -26,6 +26,7 @@ export const mainNavItems: NavItem[] = [
 ];
 
 export const masterNavItems: NavItem[] = [
+  { label: "Branches", href: "/admin/masters/branches" },
   { label: "States", href: "/admin/masters/states" },
   { label: "Cities", href: "/admin/masters/cities" },
   { label: "Branches", href: "/admin/masters/branches" },

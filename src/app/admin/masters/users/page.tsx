@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { MasterCrudPage } from "@/components/admin";
 import { branchesApi, rolesApi, usersApi } from "@/lib/services";
 
@@ -24,14 +24,17 @@ export default function UsersPage() {
     { value: string; label: string }[]
   >([]);
 
-  useEffect(() => {
-    Promise.all([
-      branchesApi.list({ limit: 100 }),
-      rolesApi.list({ limit: 100 }),
-    ]).then(([branches, roles]) => {
+  const loadBranchOptions = useCallback(() => {
+    branchesApi.list({ limit: 100 }).then((branches) => {
       setBranchOptions(
         branches.map((b) => ({ value: String(b.id), label: b.name })),
       );
+    });
+  }, []);
+
+  useEffect(() => {
+    loadBranchOptions();
+    rolesApi.list({ limit: 100 }).then((roles) => {
       setRoleOptions(
         roles.map((r) => ({
           value: String(r.id),
@@ -39,7 +42,7 @@ export default function UsersPage() {
         })),
       );
     });
-  }, []);
+  }, [loadBranchOptions]);
 
   return (
     <MasterCrudPage<UserRow>
@@ -74,6 +77,7 @@ export default function UsersPage() {
         return usersApi.update(id, body);
       }}
       onDelete={(id) => usersApi.remove(id)}
+      onOpenModal={loadBranchOptions}
       getEditValues={(row) => ({
         display_name: row.display_name,
         username: row.username,

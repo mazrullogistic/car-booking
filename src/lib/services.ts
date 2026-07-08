@@ -219,6 +219,11 @@ export const bookingsApi = {
     createResource<Booking>("/bookings", "booking", body),
   update: (id: number, body: Record<string, unknown>) =>
     updateResource<Booking>("/bookings", "booking", id, body),
+  assign: (id: number, body: Record<string, unknown>) =>
+    api<{ booking: Booking }>(`/bookings/${id}/assign`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }).then((r) => r.booking),
   cancel: (id: number) =>
     api(`/bookings/${id}/cancel`, { method: "PATCH" }),
   remove: (id: number) => deleteResource("/bookings", id),
@@ -361,4 +366,278 @@ const STATUS_COLORS: Record<string, string> = {
 
 export function statusBadgeClass(status?: string | null) {
   return STATUS_COLORS[String(status ?? "").toLowerCase()] ?? "bg-border-light text-text-secondary";
+}
+
+export function formatLongDate(value?: string | Date | null) {
+  if (!value) return "-";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return String(value);
+  return d.toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
+}
+
+export function formatTime12h(value?: string | Date | null) {
+  if (!value) return "-";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "-";
+  const formatted = d.toLocaleTimeString("en-IN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
+  return formatted.replace(/\b(am|pm)\b/gi, (m) => m.toUpperCase());
+}
+
+export function formatPaymentMode(value?: string | null) {
+  if (!value) return "-";
+  const labels: Record<string, string> = {
+    cash: "Cash",
+    upi: "UPI",
+    bank: "Bank Transfer",
+    card: "Card",
+  };
+  return labels[value.toLowerCase()] ?? capitalizeStatus(value);
+}
+
+export function formatTripType(value?: string | null) {
+  if (!value) return "-";
+  if (value === "one_way") return "One Way";
+  if (value === "round_trip") return "Round Trip";
+  return capitalizeStatus(value);
+}
+
+export function formatShortDate(value?: string | Date | null) {
+  if (!value) return "-";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return String(value);
+  const day = String(d.getDate()).padStart(2, "0");
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const year = d.getFullYear();
+  return `${day}/${month}/${year}`;
+}
+
+type WhatsAppBooking = {
+  customer?: { name?: string; mobile?: string; whatsapp?: string } | null;
+  fromCity?: { name?: string } | null;
+  toCity?: { name?: string } | null;
+  carType?: { name?: string } | null;
+  bookingCars?: { carType?: { name?: string } | null; price?: number }[];
+  pickup_date?: string | Date | null;
+  trip_type?: string | null;
+  booking_amount?: number | string | null;
+  extra_amount?: number | string | null;
+  paid_amount?: number | string | null;
+  pending_amount?: number | string | null;
+  payment_type?: string | null;
+};
+
+export type AssignBookingLine = {
+  id?: number;
+  line_no?: number;
+  vehicle_type?: string | null;
+  vendor_rate?: number | string | null;
+  commission_amount?: number | string | null;
+  carType?: { id?: number; name?: string } | null;
+  car?: {
+    id?: number;
+    car_number?: string;
+    carType?: { id?: number; name?: string } | null;
+    vendor?: { id?: number; name?: string } | null;
+  } | null;
+  driver?: { id?: number; name?: string; mobile?: string } | null;
+};
+
+export type AssignBooking = Omit<WhatsAppBooking, "bookingCars"> & {
+  id?: number;
+  ticket_no?: string;
+  status?: string;
+  assign_note?: string | null;
+  num_cars?: number;
+  bookingCars?: AssignBookingLine[];
+};
+
+/** Emojis via code points so WhatsApp URL encoding stays valid UTF-8 */
+const E = {
+  wave: "\u{1F44B}",
+  car: "\u{1F697}",
+  pin: "\u{1F4CD}",
+  calendar: "\u{1F4C5}",
+  clock: "\u{1F552}",
+  road: "\u{1F6A6}",
+  card: "\u{1F4B3}",
+  taxi: "\u{1F695}",
+  plus: "\u{2795}",
+  money: "\u{1F4B0}",
+  cash: "\u{1F4B5}",
+  green: "\u{1F7E2}",
+  pinNote: "\u{1F4CC}",
+  sparkle: "\u{2728}",
+  handshake: "\u{1F91D}",
+  star: "\u{2726}",
+} as const;
+
+export function buildBookingWhatsAppMessage(booking: WhatsAppBooking) {
+  const name = booking.customer?.name ?? "Customer";
+  const from = booking.fromCity?.name ?? "-";
+  const to = booking.toCity?.name ?? "-";
+  const vehicle =
+    booking.bookingCars
+      ?.map((line) => line.carType?.name)
+      .filter(Boolean)
+      .join(", ") ||
+    booking.carType?.name ||
+    "-";
+  const vehicleFare = Number(booking.booking_amount) || 0;
+  const extra = Number(booking.extra_amount) || 0;
+  const total = vehicleFare + extra;
+  const advance = Number(booking.paid_amount) || 0;
+  const balance =
+    booking.pending_amount != null
+      ? Number(booking.pending_amount)
+      : total - advance;
+
+  const lines = [
+    "========================",
+    `     ${E.star} BOOKING CONFIRMED ${E.star}`,
+    "========================",
+    "",
+    `Hello ${name} ${E.wave}`,
+    "",
+    `Great news! Your ride has been successfully reserved. ${E.car}`,
+    "",
+    "Here is everything you need for your upcoming journey:",
+    "",
+    `${E.pin} ${from}  --->  ${to}`,
+    "",
+    `${E.calendar} Date        | ${formatLongDate(booking.pickup_date)}`,
+    `${E.clock} Pickup      | ${formatTime12h(booking.pickup_date)}`,
+    `${E.road} Journey     | ${formatTripType(booking.trip_type)}`,
+    `${E.car} Vehicle     | ${vehicle}`,
+    "",
+    "========================",
+    "",
+    `         ${E.card} FARE DETAILS`,
+    "",
+    `${E.taxi} Vehicle Fare      ${formatMoney(vehicleFare)}`,
+    `${E.plus} Extra Amount      ${formatMoney(extra)}`,
+    "------------------------",
+    `${E.money} Total Amount      ${formatMoney(total)}`,
+    "",
+    `${E.cash} Advance Paid      ${formatMoney(advance)}`,
+    `${E.card} Balance Due       ${formatMoney(balance)}`,
+    "",
+    `Payment Mode: ${formatPaymentMode(booking.payment_type)}`,
+    "",
+    "========================",
+    "",
+    `       ${E.green} BOOKING CONFIRMED`,
+    "",
+    "Your vehicle has been reserved for the selected date and journey.",
+    "",
+    `${E.car} WHAT HAPPENS NEXT?`,
+    "",
+    "Your driver name, contact number, vehicle number, and assigned car details will be shared with you one day before your journey.",
+    "",
+    "========================",
+    "",
+    `${E.pinNote} TRAVEL NOTE`,
+    "",
+    "Please review the journey details above. If you need to update your pickup time, location, or any other booking information, contact us as early as possible.",
+    "",
+    `Sit back, relax, and leave the journey to us. ${E.sparkle}`,
+    "",
+    `Thank you for travelling with us. ${E.handshake}`,
+    "",
+    "Safe Roads • Comfortable Rides • Reliable Service",
+    "",
+    "Warm Regards,",
+    `BROMY TOUR'SANDTRAVELS ${E.taxi}`,
+  ];
+
+  return lines.join("\n");
+}
+
+export function buildWhatsAppShareUrl(mobile: string, message: string) {
+  const digits = mobile.replace(/\D/g, "");
+  const phone = digits.startsWith("91") ? digits : `91${digits}`;
+  // api.whatsapp.com handles UTF-8 emoji text more reliably than wa.me alone
+  return `https://api.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(message)}`;
+}
+
+function assignedCarTypeName(line: AssignBookingLine) {
+  return (
+    line.car?.carType?.name ||
+    line.carType?.name ||
+    "-"
+  );
+}
+
+function assignedCarNumber(line: AssignBookingLine) {
+  return line.car?.car_number ?? "-";
+}
+
+export function buildDriverAssignMessage(booking: AssignBooking, lineIndex = 0) {
+  const line = booking.bookingCars?.[lineIndex];
+  if (!line) return "";
+
+  const from = booking.fromCity?.name ?? "-";
+  const to = booking.toCity?.name ?? "-";
+  const name = booking.customer?.name ?? "Customer";
+  const mobile = booking.customer?.mobile ?? "-";
+
+  return [
+    "New Trip Confirmed",
+    "",
+    `${from} to ${to}`,
+    `Date: ${formatShortDate(booking.pickup_date)}`,
+    `Time: ${formatTime12h(booking.pickup_date)}`,
+    `Trip Type: ${formatTripType(booking.trip_type)}`,
+    `Car: ${assignedCarTypeName(line)}`,
+    "",
+    `Customer: ${name}`,
+    `Contact: ${mobile}`,
+    "",
+    "Please confirm after receiving this trip detail.",
+    "",
+    "Thank you.",
+  ].join("\n");
+}
+
+export function buildAssignCustomerWhatsAppMessage(booking: AssignBooking) {
+  const from = booking.fromCity?.name ?? "-";
+  const to = booking.toCity?.name ?? "-";
+  const ticket = booking.ticket_no ?? "";
+  const lines = booking.bookingCars ?? [];
+
+  const vehicleBlocks = lines
+    .map((line, index) => {
+      const driverName = line.driver?.name ?? "-";
+      const driverMobile = line.driver?.mobile ?? "-";
+      return [
+        `Vehicle ${index + 1}:`,
+        `  Car: ${assignedCarTypeName(line)} — ${assignedCarNumber(line)}`,
+        `  Driver: ${driverName} — ${driverMobile}`,
+      ].join("\n");
+    })
+    .join("\n\n");
+
+  const parts = [
+    `Booking Assigned — ${ticket}`,
+    "",
+    `${from} to ${to}`,
+    `Date: ${formatShortDate(booking.pickup_date)} | Time: ${formatTime12h(booking.pickup_date)}`,
+    `Trip Type: ${formatTripType(booking.trip_type)}`,
+    "",
+    vehicleBlocks,
+  ];
+
+  if (booking.assign_note?.trim()) {
+    parts.push("", booking.assign_note.trim());
+  }
+
+  parts.push("", "Thank you.");
+  return parts.join("\n");
 }

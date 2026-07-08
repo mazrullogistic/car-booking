@@ -15,6 +15,8 @@ import {
 } from "@/components/admin";
 import {
   bookingsApi,
+  buildBookingWhatsAppMessage,
+  buildWhatsAppShareUrl,
   capitalizeStatus,
   formatDate,
   formatMoney,
@@ -27,8 +29,19 @@ type BookingRow = Record<string, unknown> & {
   ticket_no: string;
   status: string;
   booking_amount: number;
+  extra_amount?: number;
+  paid_amount?: number;
+  pending_amount?: number;
+  payment_type?: string;
+  trip_type?: string;
   customer?: { name: string; mobile?: string; whatsapp?: string };
   car?: { car_number: string };
+  carType?: { name: string };
+  bookingCars?: {
+    carType?: { name: string };
+    price?: number;
+    car?: { car_number: string };
+  }[];
   fromCity?: { name: string };
   toCity?: { name: string };
   pickup_date: string;
@@ -120,7 +133,17 @@ export default function BookingsPage() {
     {
       key: "car",
       header: "Car",
-      render: (row) => row.car?.car_number ?? "-",
+      render: (row) => {
+        const assigned =
+          row.bookingCars
+            ?.map((line) => line.car?.car_number)
+            .filter(Boolean) ?? [];
+        if (assigned.length > 0) {
+          const first = assigned[0];
+          return assigned.length > 1 ? `${first} +${assigned.length - 1}` : first;
+        }
+        return row.car?.car_number ?? "-";
+      },
     },
     {
       key: "fromCity",
@@ -161,6 +184,13 @@ export default function BookingsPage() {
         const mobile = row.customer?.whatsapp || row.customer?.mobile;
         return (
           <div className="flex flex-wrap gap-1">
+            {row.status !== "cancelled" && (
+              <Link href={`/admin/bookings/${row.id}/assign`}>
+                <Button size="sm" variant="outline">
+                  Assign Car
+                </Button>
+              </Link>
+            )}
             <Link href={`/admin/bookings/${row.id}/edit`}>
               <Button size="sm" variant="outline">
                 Edit
@@ -184,7 +214,10 @@ export default function BookingsPage() {
             </Button>
             {mobile && (
               <a
-                href={`https://wa.me/91${mobile.replace(/\D/g, "")}`}
+                href={buildWhatsAppShareUrl(
+                  mobile,
+                  buildBookingWhatsAppMessage(row),
+                )}
                 target="_blank"
                 rel="noopener noreferrer"
               >
