@@ -25,7 +25,9 @@ export default function AdminLoginPage() {
       const message =
         err instanceof ApiError
           ? err.message
-          : "Login failed. Please try again.";
+          : err instanceof Error && err.message
+            ? `Cannot reach API: ${err.message}`
+            : "Login failed. Please try again.";
       setError(message);
     } finally {
       setLoading(false);

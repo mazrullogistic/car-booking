@@ -1,4 +1,8 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL ??
+  (process.env.NODE_ENV === "development"
+    ? "http://localhost:4000"
+    : "https://car-booking.bromytoursandtravels.com");
 const TOKEN_KEY = "auth_token";
 
 export function getToken(): string | null {
