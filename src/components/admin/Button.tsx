@@ -1,6 +1,14 @@
-import { type ButtonHTMLAttributes, forwardRef } from "react";
+import { type AnchorHTMLAttributes, type ButtonHTMLAttributes, forwardRef } from "react";
+import Link from "next/link";
 
-type ButtonVariant = "primary" | "secondary" | "outline" | "ghost" | "danger";
+type ButtonVariant =
+  | "primary"
+  | "secondary"
+  | "outline"
+  | "ghost"
+  | "danger"
+  | "dangerOutline"
+  | "success";
 type ButtonSize = "sm" | "md" | "lg";
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -8,6 +16,16 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   size?: ButtonSize;
   loading?: boolean;
 }
+
+interface LinkButtonProps
+  extends Omit<AnchorHTMLAttributes<HTMLAnchorElement>, "href"> {
+  href: string;
+  variant?: ButtonVariant;
+  size?: ButtonSize;
+}
+
+const buttonBase =
+  "inline-flex items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:cursor-not-allowed whitespace-nowrap";
 
 const variantClasses: Record<ButtonVariant, string> = {
   primary:
@@ -20,6 +38,10 @@ const variantClasses: Record<ButtonVariant, string> = {
     "text-text-secondary hover:bg-border-light hover:text-text-primary disabled:opacity-60",
   danger:
     "bg-danger text-white hover:bg-danger/90 shadow-sm disabled:bg-danger/60",
+  dangerOutline:
+    "border border-danger/40 bg-card-bg text-danger hover:bg-danger-light disabled:opacity-60",
+  success:
+    "border border-success/40 bg-success-light text-success hover:bg-success-light/70 disabled:opacity-60",
 };
 
 const sizeClasses: Record<ButtonSize, string> = {
@@ -45,7 +67,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       <button
         ref={ref}
         disabled={disabled || loading}
-        className={`inline-flex items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:cursor-not-allowed ${variantClasses[variant]} ${sizeClasses[size]} ${className}`}
+        className={`${buttonBase} ${variantClasses[variant]} ${sizeClasses[size]} ${className}`}
         {...props}
       >
         {loading && (
@@ -77,3 +99,43 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
 );
 
 Button.displayName = "Button";
+
+export function LinkButton({
+  href,
+  variant = "outline",
+  size = "md",
+  className = "",
+  children,
+  ...props
+}: LinkButtonProps) {
+  return (
+    <Link
+      href={href}
+      className={`${buttonBase} ${variantClasses[variant]} ${sizeClasses[size]} ${className}`}
+      {...props}
+    >
+      {children}
+    </Link>
+  );
+}
+
+export function AnchorButton({
+  variant = "outline",
+  size = "md",
+  className = "",
+  children,
+  ...props
+}: Omit<AnchorHTMLAttributes<HTMLAnchorElement>, "className"> & {
+  variant?: ButtonVariant;
+  size?: ButtonSize;
+  className?: string;
+}) {
+  return (
+    <a
+      className={`${buttonBase} ${variantClasses[variant]} ${sizeClasses[size]} ${className}`}
+      {...props}
+    >
+      {children}
+    </a>
+  );
+}

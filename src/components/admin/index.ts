@@ -1,6 +1,6 @@
 export { AdminShell } from "./AdminShell";
 export { Alert } from "./Alert";
-export { Button } from "./Button";
+export { Button, LinkButton, AnchorButton } from "./Button";
 export { Card } from "./Card";
 export { DataTable, type Column } from "./DataTable";
 export { FormPage } from "./FormPage";

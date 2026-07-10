@@ -1,15 +1,16 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
 import { ApiError } from "@/lib/api";
 import {
   Alert,
+  AnchorButton,
   Button,
   Card,
   DataTable,
   type Column,
   Input,
+  LinkButton,
   PageHeader,
   Select,
 } from "@/components/admin";
@@ -35,13 +36,6 @@ type BookingRow = Record<string, unknown> & {
   payment_type?: string;
   trip_type?: string;
   customer?: { name: string; mobile?: string; whatsapp?: string };
-  car?: { car_number: string };
-  carType?: { name: string };
-  bookingCars?: {
-    carType?: { name: string };
-    price?: number;
-    car?: { car_number: string };
-  }[];
   fromCity?: { name: string };
   toCity?: { name: string };
   pickup_date: string;
@@ -131,21 +125,6 @@ export default function BookingsPage() {
       render: (row) => row.customer?.name ?? "-",
     },
     {
-      key: "car",
-      header: "Car",
-      render: (row) => {
-        const assigned =
-          row.bookingCars
-            ?.map((line) => line.car?.car_number)
-            .filter(Boolean) ?? [];
-        if (assigned.length > 0) {
-          const first = assigned[0];
-          return assigned.length > 1 ? `${first} +${assigned.length - 1}` : first;
-        }
-        return row.car?.car_number ?? "-";
-      },
-    },
-    {
       key: "fromCity",
       header: "From",
       render: (row) => row.fromCity?.name ?? "-",
@@ -183,23 +162,27 @@ export default function BookingsPage() {
       render: (row) => {
         const mobile = row.customer?.whatsapp || row.customer?.mobile;
         return (
-          <div className="flex flex-wrap gap-1">
+          <div className="flex flex-wrap items-center gap-1.5">
             {row.status !== "cancelled" && (
-              <Link href={`/admin/bookings/${row.id}/assign`}>
-                <Button size="sm" variant="outline">
-                  Assign Car
-                </Button>
-              </Link>
+              <LinkButton
+                href={`/admin/bookings/${row.id}/assign`}
+                size="sm"
+                variant="primary"
+              >
+                Assign Car
+              </LinkButton>
             )}
-            <Link href={`/admin/bookings/${row.id}/edit`}>
-              <Button size="sm" variant="outline">
-                Edit
-              </Button>
-            </Link>
+            <LinkButton
+              href={`/admin/bookings/${row.id}/edit`}
+              size="sm"
+              variant="outline"
+            >
+              Edit
+            </LinkButton>
             {row.status !== "cancelled" && (
               <Button
                 size="sm"
-                variant="danger"
+                variant="dangerOutline"
                 onClick={() => handleCancel(row.id)}
               >
                 Cancel
@@ -213,26 +196,19 @@ export default function BookingsPage() {
               Delete
             </Button>
             {mobile && (
-              <a
+              <AnchorButton
                 href={buildWhatsAppShareUrl(
                   mobile,
                   buildBookingWhatsAppMessage(row),
                 )}
                 target="_blank"
                 rel="noopener noreferrer"
+                size="sm"
+                variant="success"
               >
-                <Button size="sm" variant="ghost">
-                  WhatsApp
-                </Button>
-              </a>
+                WhatsApp
+              </AnchorButton>
             )}
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => window.print()}
-            >
-              Print
-            </Button>
           </div>
         );
       },
