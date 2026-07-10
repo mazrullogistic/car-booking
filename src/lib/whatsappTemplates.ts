@@ -74,7 +74,9 @@ function notifyCacheListeners() {
 
 export function subscribeWhatsappTemplateCache(listener: () => void) {
   cacheListeners.add(listener);
-  return () => cacheListeners.delete(listener);
+  return () => {
+    cacheListeners.delete(listener);
+  };
 }
 
 export function setWhatsappTemplateCache(templates: WhatsappTemplate[]) {

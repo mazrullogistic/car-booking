@@ -51,7 +51,9 @@ export function WhatsAppTemplatePicker({
     [category, cacheTick],
   );
 
-  useEffect(() => subscribeWhatsappTemplateCache(() => setCacheTick((n) => n + 1)), []);
+  useEffect(() => {
+    return subscribeWhatsappTemplateCache(() => setCacheTick((n) => n + 1));
+  }, []);
   const [open, setOpen] = useState(false);
   const [menuPosition, setMenuPosition] = useState<{
     top: number;
