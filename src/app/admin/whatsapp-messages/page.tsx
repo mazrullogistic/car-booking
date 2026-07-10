@@ -126,20 +126,6 @@ export default function WhatsappMessagesPage() {
     }
   }
 
-  async function handleReset(template: WhatsappTemplate) {
-    if (!confirm(`Reset "${template.name}" to its saved default text?`)) return;
-    setError("");
-    try {
-      await whatsappTemplatesApi.reset(template.id);
-      if (editing?.id === template.id) {
-        setBody(template.default_body);
-      }
-      await load();
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Reset failed");
-    }
-  }
-
   function insertPlaceholder(key: string) {
     setBody((prev) => `${prev}{{${key}}}`);
   }
@@ -222,13 +208,6 @@ export default function WhatsappMessagesPage() {
                         Set Default
                       </Button>
                     )}
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleReset(template)}
-                    >
-                      Reset Text
-                    </Button>
                     <Button
                       size="sm"
                       variant="danger"

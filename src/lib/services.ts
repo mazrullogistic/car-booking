@@ -365,11 +365,6 @@ export const whatsappTemplatesApi = {
       `/whatsapp-templates/${id}/set-default`,
       { method: "POST" },
     ),
-  reset: (id: number) =>
-    api<{ template: import("./whatsappTemplates").WhatsappTemplate }>(
-      `/whatsapp-templates/${id}/reset`,
-      { method: "POST" },
-    ),
 };
 
 export function formatDate(value?: string | Date | null) {
