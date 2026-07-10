@@ -58,7 +58,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           onMenuClick={() => setMobileOpen(true)}
           onCollapseClick={() => setCollapsed((c) => !c)}
         />
-        <main className="flex-1 p-4 lg:p-6">{children}</main>
+        <main className="flex-1 overflow-x-hidden p-3 sm:p-4 lg:p-6">{children}</main>
       </div>
     </div>
   );

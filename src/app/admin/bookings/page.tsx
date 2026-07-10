@@ -271,10 +271,13 @@ export default function BookingsPage() {
               onChange={(e) => setStatus(e.target.value)}
             />
           </div>
-          <div className="flex gap-2">
-            <Button onClick={() => setQuery(search)}>Search</Button>
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+            <Button className="w-full sm:w-auto" onClick={() => setQuery(search)}>
+              Search
+            </Button>
             <Button
               variant="outline"
+              className="w-full sm:w-auto"
               onClick={() => {
                 setSearch("");
                 setQuery("");

@@ -22,25 +22,28 @@ export function Modal({ open, title, onClose, children }: ModalProps) {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4">
       <button
         type="button"
         className="absolute inset-0 bg-black/40"
         onClick={onClose}
         aria-label="Close modal"
       />
-      <div className="relative z-10 w-full max-w-lg rounded-xl bg-card-bg p-6 shadow-xl">
-        <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-text-primary">{title}</h3>
+      <div className="relative z-10 flex max-h-[92vh] w-full flex-col rounded-t-2xl bg-card-bg shadow-xl sm:max-h-[90vh] sm:max-w-lg sm:rounded-xl">
+        <div className="flex shrink-0 items-center justify-between border-b border-border px-4 py-4 sm:px-6">
+          <h3 className="pr-4 text-base font-semibold text-text-primary sm:text-lg">
+            {title}
+          </h3>
           <button
             type="button"
             onClick={onClose}
             className="rounded-lg p-1 text-text-muted hover:bg-border-light"
+            aria-label="Close"
           >
             ✕
           </button>
         </div>
-        {children}
+        <div className="overflow-y-auto px-4 py-4 sm:px-6">{children}</div>
       </div>
     </div>
   );

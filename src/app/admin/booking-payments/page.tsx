@@ -195,10 +195,13 @@ export default function BookingPaymentsPage() {
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
-          <div className="flex gap-2">
-            <Button onClick={() => setQuery(search)}>Search</Button>
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+            <Button className="w-full sm:w-auto" onClick={() => setQuery(search)}>
+              Search
+            </Button>
             <Button
               variant="outline"
+              className="w-full sm:w-auto"
               onClick={() => {
                 setSearch("");
                 setQuery("");
@@ -273,13 +276,14 @@ export default function BookingPaymentsPage() {
               setForm((prev) => ({ ...prev, remarks: e.target.value }))
             }
           />
-          <div className="flex gap-2 pt-2">
-            <Button type="submit" loading={saving}>
+          <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row">
+            <Button type="submit" loading={saving} className="w-full sm:w-auto">
               Save
             </Button>
             <Button
               type="button"
               variant="outline"
+              className="w-full sm:w-auto"
               onClick={() => setModalOpen(false)}
             >
               Cancel

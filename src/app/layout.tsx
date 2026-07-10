@@ -17,6 +17,11 @@ export const metadata: Metadata = {
   description: "Car booking management system",
 };
 
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{

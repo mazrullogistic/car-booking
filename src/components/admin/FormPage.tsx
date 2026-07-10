@@ -22,11 +22,13 @@ export function FormPage({
   return (
     <>
       <PageHeader title={title} description={description}>
-        <Link href={backHref}>
-          <Button variant="outline">Back</Button>
+        <Link href={backHref} className="w-full sm:w-auto">
+          <Button variant="outline" className="w-full sm:w-auto">
+            Back
+          </Button>
         </Link>
       </PageHeader>
-      <Card className="max-w-3xl">{children}</Card>
+      <Card className="w-full max-w-6xl">{children}</Card>
     </>
   );
 }

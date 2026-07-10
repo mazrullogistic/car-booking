@@ -152,13 +152,14 @@ export default function NewBookingPaymentPage() {
           value={remarks}
           onChange={(e) => setRemarks(e.target.value)}
         />
-        <div className="flex gap-3 pt-2">
-          <Button type="submit" loading={loading}>
+        <div className="flex flex-col-reverse gap-3 border-t border-border pt-4 sm:flex-row">
+          <Button type="submit" loading={loading} className="w-full sm:w-auto">
             Save Payment
           </Button>
           <Button
             type="button"
             variant="outline"
+            className="w-full sm:w-auto"
             onClick={() => router.push("/admin/booking-payments")}
           >
             Cancel

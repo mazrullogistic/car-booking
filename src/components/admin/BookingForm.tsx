@@ -414,7 +414,7 @@ export function BookingForm({
         </Alert>
       )}
       <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           <Select
             label="Branch"
             options={branchOptions}
@@ -475,11 +475,11 @@ export function BookingForm({
             onChange={(e) => setField("pickup_date", e.target.value)}
             required
           />
-          <div className="flex flex-col gap-1.5">
+          <div className="flex min-w-0 flex-col gap-1.5 md:col-span-2 xl:col-span-1">
             <span className="text-sm font-medium text-text-primary">
               Pickup Time
             </span>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid min-w-0 grid-cols-3 gap-2 sm:gap-3">
               <Select
                 options={HOUR_OPTIONS}
                 value={pickupTime.hour}
@@ -528,15 +528,21 @@ export function BookingForm({
           />
         </div>
 
-        <div className="space-y-3 rounded-xl border border-border bg-card-bg p-4">
-          <div className="flex items-center justify-between gap-3">
+        <div className="space-y-3 rounded-xl border border-border bg-page-bg/50 p-3 sm:p-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h3 className="text-sm font-semibold text-text-primary">Cars</h3>
               <p className="text-xs text-text-muted">
                 Add or remove car type and price rows
               </p>
             </div>
-            <Button type="button" size="sm" variant="outline" onClick={addCarLine}>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="w-full sm:w-auto"
+              onClick={addCarLine}
+            >
               + Add Car
             </Button>
           </div>
@@ -544,7 +550,7 @@ export function BookingForm({
             {carLines.map((line, index) => (
               <div
                 key={index}
-                className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end"
+                className="grid grid-cols-1 gap-3 rounded-lg border border-border bg-card-bg p-3 md:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] xl:items-end"
               >
                 <Select
                   label={index === 0 ? "Car Type" : `Car Type #${index + 1}`}
@@ -568,7 +574,7 @@ export function BookingForm({
                   type="button"
                   size="sm"
                   variant="danger"
-                  className="mb-0.5"
+                  className="w-full xl:mb-0.5 xl:w-auto"
                   disabled={carLines.length <= 1}
                   onClick={() => removeCarLine(index)}
                 >
@@ -579,7 +585,7 @@ export function BookingForm({
           </div>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {isPerKm && (
             <Input
               label="Per KM Price (₹)"
@@ -646,13 +652,14 @@ export function BookingForm({
           onChange={(e) => setField("remarks", e.target.value)}
         />
 
-        <div className="flex gap-3 pt-2">
-          <Button type="submit" loading={loading}>
+        <div className="flex flex-col-reverse gap-3 border-t border-border pt-4 sm:flex-row sm:items-center">
+          <Button type="submit" loading={loading} className="w-full sm:w-auto">
             {isEdit ? "Update Booking" : "Create Booking"}
           </Button>
           <Button
             type="button"
             variant="outline"
+            className="w-full sm:w-auto"
             onClick={() => (window.location.href = backHref)}
           >
             Cancel

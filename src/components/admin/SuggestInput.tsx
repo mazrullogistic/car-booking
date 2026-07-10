@@ -75,7 +75,7 @@ export const SuggestInput = forwardRef<HTMLInputElement, SuggestInputProps>(
     }, []);
 
     return (
-      <div className="relative flex flex-col gap-1.5" ref={containerRef}>
+      <div className="relative flex min-w-0 flex-col gap-1.5" ref={containerRef}>
         {label && (
           <label
             htmlFor={inputId}

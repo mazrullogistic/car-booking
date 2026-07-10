@@ -80,6 +80,7 @@ body {
   background: var(--page-bg);
   color: var(--text-primary);
   font-family: var(--font-sans), system-ui, sans-serif;
+  overflow-x: clip;
 }
 
 /* Scrollbar styling for sidebar */

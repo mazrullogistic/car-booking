@@ -264,7 +264,7 @@ export default function ReportsPage() {
       )}
 
       <Card className="mb-6">
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           <Input label="From" type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
           <Input label="To" type="date" value={to} onChange={(e) => setTo(e.target.value)} />
           <Select label="Branch" options={branchOptions} value={branchId} onChange={(e) => setBranchId(e.target.value)} />
@@ -293,11 +293,11 @@ export default function ReportsPage() {
             onChange={(e) => setTripType(e.target.value)}
           />
         </div>
-        <div className="mt-4 flex gap-3">
-          <Button onClick={runReports} loading={loading}>
+        <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:gap-3">
+          <Button onClick={runReports} loading={loading} className="w-full sm:w-auto">
             Run Reports
           </Button>
-          <Button variant="outline" onClick={handleExport}>
+          <Button variant="outline" onClick={handleExport} className="w-full sm:w-auto">
             Export CSV
           </Button>
         </div>
@@ -305,7 +305,7 @@ export default function ReportsPage() {
 
       {ran && (
         <>
-          <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
+          <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-7">
             {KPI_LABELS.map(({ key, label }) => (
               <Card key={key}>
                 <p className="text-xs text-text-secondary">{label}</p>

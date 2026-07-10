@@ -28,7 +28,7 @@ export function Header({
     .toUpperCase();
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-card-bg px-4 lg:px-6">
+    <header className="sticky top-0 z-30 flex h-14 items-center justify-between gap-2 border-b border-border bg-card-bg px-3 sm:h-16 sm:gap-3 sm:px-4 lg:px-6">
       <div className="flex items-center gap-3">
         <button
           type="button"
@@ -60,10 +60,12 @@ export function Header({
           </svg>
         </button>
 
-        <h2 className="text-sm font-medium text-text-secondary">{title}</h2>
+        <h2 className="truncate text-sm font-medium text-text-secondary">
+          {title}
+        </h2>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex shrink-0 items-center gap-2 sm:gap-3">
         <div className="hidden items-center gap-2 sm:flex">
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-light text-sm font-semibold text-primary">
             {initials}
@@ -77,7 +79,7 @@ export function Header({
             )}
           </div>
         </div>
-        <Button variant="outline" size="sm" onClick={() => logout()}>
+        <Button variant="outline" size="sm" className="shrink-0" onClick={() => logout()}>
           Logout
         </Button>
       </div>

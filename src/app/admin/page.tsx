@@ -78,7 +78,7 @@ export default function AdminDashboardPage() {
         </Alert>
       )}
 
-      <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {statCards.map((stat) => (
           <Card key={stat.label}>
             <p className="text-sm text-text-secondary">{stat.label}</p>
@@ -106,10 +106,54 @@ function BookingTable({
 }) {
   return (
     <Card padding="none">
-      <div className="border-b border-border px-5 py-4">
+      <div className="border-b border-border px-4 py-4 sm:px-5">
         <h2 className="text-base font-semibold text-text-primary">{title}</h2>
       </div>
-      <div className="overflow-x-auto">
+
+      <div className="md:hidden">
+        {rows.length === 0 ? (
+          <p className="px-4 py-8 text-center text-text-muted">No bookings found</p>
+        ) : (
+          <div className="divide-y divide-border">
+            {rows.map((booking) => (
+              <article key={booking.id} className="space-y-2 p-4 text-sm">
+                <div className="flex items-start justify-between gap-3">
+                  <span className="text-text-secondary">Ticket</span>
+                  <span className="font-medium text-primary">{booking.ticket_no}</span>
+                </div>
+                <div className="flex items-start justify-between gap-3">
+                  <span className="text-text-secondary">Customer</span>
+                  <span className="text-right text-text-primary">
+                    {booking.customer?.name ?? "-"}
+                  </span>
+                </div>
+                <div className="flex items-start justify-between gap-3">
+                  <span className="text-text-secondary">Route</span>
+                  <span className="text-right text-text-secondary">
+                    {booking.fromCity?.name ?? "?"} → {booking.toCity?.name ?? "?"}
+                  </span>
+                </div>
+                <div className="flex items-start justify-between gap-3">
+                  <span className="text-text-secondary">Date</span>
+                  <span className="text-text-secondary">
+                    {formatDate(booking.pickup_date)}
+                  </span>
+                </div>
+                <div className="flex items-start justify-between gap-3">
+                  <span className="text-text-secondary">Status</span>
+                  <span
+                    className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${statusBadgeClass(booking.status)}`}
+                  >
+                    {capitalizeStatus(booking.status)}
+                  </span>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="hidden overflow-x-auto md:block">
         <table className="w-full text-left text-sm">
           <thead>
             <tr className="border-b border-border bg-border-light/50">

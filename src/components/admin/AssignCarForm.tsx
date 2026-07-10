@@ -329,12 +329,16 @@ export function AssignCarForm({ bookingId }: AssignCarFormProps) {
   return (
     <>
       <PageHeader title="Assign Car" description={`Ticket ${booking.ticket_no}`}>
-        <div className="flex gap-2">
-          <Link href={`/admin/bookings/${bookingId}/edit`}>
-            <Button variant="outline">Edit Booking</Button>
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+          <Link href={`/admin/bookings/${bookingId}/edit`} className="w-full sm:w-auto">
+            <Button variant="outline" className="w-full sm:w-auto">
+              Edit Booking
+            </Button>
           </Link>
-          <Link href="/admin/bookings">
-            <Button variant="outline">Back</Button>
+          <Link href="/admin/bookings" className="w-full sm:w-auto">
+            <Button variant="outline" className="w-full sm:w-auto">
+              Back
+            </Button>
           </Link>
         </div>
       </PageHeader>
@@ -349,7 +353,7 @@ export function AssignCarForm({ bookingId }: AssignCarFormProps) {
         <h2 className="mb-4 text-lg font-semibold text-text-primary">
           Booking Details
         </h2>
-        <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
           <div>
             <dt className="text-xs text-text-muted">Ticket</dt>
             <dd className="font-medium">{booking.ticket_no}</dd>
@@ -420,7 +424,7 @@ export function AssignCarForm({ bookingId }: AssignCarFormProps) {
               {row.requested_type ? ` — ${row.requested_type}` : ""}
             </h3>
 
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <Select
                 label="Vehicle Type"
                 value={row.vehicle_type}
@@ -530,8 +534,8 @@ export function AssignCarForm({ bookingId }: AssignCarFormProps) {
           </Card>
         ))}
 
-        <div className="flex flex-wrap gap-2">
-          <Button type="submit" disabled={saving}>
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+          <Button type="submit" disabled={saving} className="w-full sm:w-auto">
             {saving ? "Saving..." : "Save Booking"}
           </Button>
         </div>
@@ -542,7 +546,7 @@ export function AssignCarForm({ bookingId }: AssignCarFormProps) {
           <h3 className="mb-3 text-base font-semibold text-text-primary">
             Share Assignment
           </h3>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
             {customerMobile && (
               <a
                 href={buildWhatsAppShareUrl(
@@ -551,8 +555,11 @@ export function AssignCarForm({ bookingId }: AssignCarFormProps) {
                 )}
                 target="_blank"
                 rel="noopener noreferrer"
+                className="w-full sm:w-auto"
               >
-                <Button type="button">Share to Customer</Button>
+                <Button type="button" className="w-full sm:w-auto">
+                  Share to Customer
+                </Button>
               </a>
             )}
             {assignments.map((_, index) => (
@@ -560,6 +567,7 @@ export function AssignCarForm({ bookingId }: AssignCarFormProps) {
                 key={index}
                 type="button"
                 variant="outline"
+                className="w-full sm:w-auto"
                 onClick={() => copyDriverMessage(index)}
               >
                 {copyFeedback === index
