@@ -23,6 +23,11 @@ export const mainNavItems: NavItem[] = [
     icon: "finance",
   },
   { label: "Reports", href: "/admin/reports", icon: "reports" },
+  {
+    label: "WhatsApp Messages",
+    href: "/admin/whatsapp-messages",
+    icon: "messages",
+  },
 ];
 
 export const masterNavItems: NavItem[] = [

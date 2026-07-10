@@ -14,4 +14,5 @@ export { Modal } from "./Modal";
 export { ApiListPage } from "./ApiListPage";
 export { MasterCrudPage } from "./MasterCrudPage";
 export { AssignCarForm } from "./AssignCarForm";
+export { WhatsAppTemplatePicker } from "./WhatsAppTemplatePicker";
 export { SuggestInput, type SuggestOption } from "./SuggestInput";

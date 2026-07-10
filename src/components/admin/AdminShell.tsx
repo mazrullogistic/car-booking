@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { isAuthenticated } from "@/lib/auth";
+import { whatsappTemplatesApi } from "@/lib/services";
+import { setWhatsappTemplateCache } from "@/lib/whatsappTemplates";
 import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
 
@@ -32,6 +34,14 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     setMobileOpen(false);
   }, [pathname]);
+
+  useEffect(() => {
+    if (isLoginPage || !checked) return;
+    whatsappTemplatesApi
+      .list()
+      .then(({ templates }) => setWhatsappTemplateCache(templates))
+      .catch(() => undefined);
+  }, [isLoginPage, checked]);
 
   if (isLoginPage) {
     return <>{children}</>;

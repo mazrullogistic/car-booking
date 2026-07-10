@@ -1,4 +1,9 @@
 import { api, buildQuery } from "./api";
+import {
+  renderAssignCustomerMessage,
+  renderBookingMessage,
+  renderDriverMessage,
+} from "./whatsappTemplates";
 
 export type ListParams = {
   search?: string;
@@ -320,7 +325,52 @@ export const PERMISSION_KEYS = [
   "roles.manage",
   "users.manage",
   "vendors.manage",
+  "whatsapp.manage",
 ];
+
+export const whatsappTemplatesApi = {
+  list: (category?: string) => {
+    const query = category ? `?category=${encodeURIComponent(category)}` : "";
+    return api<{ templates: import("./whatsappTemplates").WhatsappTemplate[] }>(
+      `/whatsapp-templates${query}`,
+    );
+  },
+  create: (body: {
+    category: string;
+    name: string;
+    body: string;
+    is_default?: boolean;
+  }) =>
+    api<{ template: import("./whatsappTemplates").WhatsappTemplate }>(
+      "/whatsapp-templates",
+      { method: "POST", body: JSON.stringify(body) },
+    ),
+  update: (
+    id: number,
+    body: Partial<{
+      name: string;
+      body: string;
+      is_active: boolean;
+      sort_order: number;
+    }>,
+  ) =>
+    api<{ template: import("./whatsappTemplates").WhatsappTemplate }>(
+      `/whatsapp-templates/${id}`,
+      { method: "PUT", body: JSON.stringify(body) },
+    ),
+  remove: (id: number) =>
+    api<{ message: string }>(`/whatsapp-templates/${id}`, { method: "DELETE" }),
+  setDefault: (id: number) =>
+    api<{ template: import("./whatsappTemplates").WhatsappTemplate }>(
+      `/whatsapp-templates/${id}/set-default`,
+      { method: "POST" },
+    ),
+  reset: (id: number) =>
+    api<{ template: import("./whatsappTemplates").WhatsappTemplate }>(
+      `/whatsapp-templates/${id}/reset`,
+      { method: "POST" },
+    ),
+};
 
 export function formatDate(value?: string | Date | null) {
   if (!value) return "-";
@@ -459,105 +509,8 @@ export type AssignBooking = Omit<WhatsAppBooking, "bookingCars"> & {
   bookingCars?: AssignBookingLine[];
 };
 
-/** Emojis via code points so WhatsApp URL encoding stays valid UTF-8 */
-const E = {
-  wave: "\u{1F44B}",
-  car: "\u{1F697}",
-  pin: "\u{1F4CD}",
-  calendar: "\u{1F4C5}",
-  clock: "\u{1F552}",
-  road: "\u{1F6A6}",
-  card: "\u{1F4B3}",
-  taxi: "\u{1F695}",
-  plus: "\u{2795}",
-  money: "\u{1F4B0}",
-  cash: "\u{1F4B5}",
-  green: "\u{1F7E2}",
-  pinNote: "\u{1F4CC}",
-  sparkle: "\u{2728}",
-  handshake: "\u{1F91D}",
-  star: "\u{2726}",
-} as const;
-
 export function buildBookingWhatsAppMessage(booking: WhatsAppBooking) {
-  const name = booking.customer?.name ?? "Customer";
-  const from = booking.fromCity?.name ?? "-";
-  const to = booking.toCity?.name ?? "-";
-  const vehicle =
-    booking.bookingCars
-      ?.map((line) => line.carType?.name)
-      .filter(Boolean)
-      .join(", ") ||
-    booking.carType?.name ||
-    "-";
-  const vehicleFare = Number(booking.booking_amount) || 0;
-  const extra = Number(booking.extra_amount) || 0;
-  const total = vehicleFare + extra;
-  const advance = Number(booking.paid_amount) || 0;
-  const balance =
-    booking.pending_amount != null
-      ? Number(booking.pending_amount)
-      : total - advance;
-
-  const lines = [
-    "========================",
-    `     ${E.star} BOOKING CONFIRMED ${E.star}`,
-    "========================",
-    "",
-    `Hello ${name} ${E.wave}`,
-    "",
-    `Great news! Your ride has been successfully reserved. ${E.car}`,
-    "",
-    "Here is everything you need for your upcoming journey:",
-    "",
-    `${E.pin} ${from}  --->  ${to}`,
-    "",
-    `${E.calendar} Date        | ${formatLongDate(booking.pickup_date)}`,
-    `${E.clock} Pickup      | ${formatTime12h(booking.pickup_date)}`,
-    `${E.road} Journey     | ${formatTripType(booking.trip_type)}`,
-    `${E.car} Vehicle     | ${vehicle}`,
-    "",
-    "========================",
-    "",
-    `         ${E.card} FARE DETAILS`,
-    "",
-    `${E.taxi} Vehicle Fare      ${formatMoney(vehicleFare)}`,
-    `${E.plus} Extra Amount      ${formatMoney(extra)}`,
-    "------------------------",
-    `${E.money} Total Amount      ${formatMoney(total)}`,
-    "",
-    `${E.cash} Advance Paid      ${formatMoney(advance)}`,
-    `${E.card} Balance Due       ${formatMoney(balance)}`,
-    "",
-    `Payment Mode: ${formatPaymentMode(booking.payment_type)}`,
-    "",
-    "========================",
-    "",
-    `       ${E.green} BOOKING CONFIRMED`,
-    "",
-    "Your vehicle has been reserved for the selected date and journey.",
-    "",
-    `${E.car} WHAT HAPPENS NEXT?`,
-    "",
-    "Your driver name, contact number, vehicle number, and assigned car details will be shared with you one day before your journey.",
-    "",
-    "========================",
-    "",
-    `${E.pinNote} TRAVEL NOTE`,
-    "",
-    "Please review the journey details above. If you need to update your pickup time, location, or any other booking information, contact us as early as possible.",
-    "",
-    `Sit back, relax, and leave the journey to us. ${E.sparkle}`,
-    "",
-    `Thank you for travelling with us. ${E.handshake}`,
-    "",
-    "Safe Roads • Comfortable Rides • Reliable Service",
-    "",
-    "Warm Regards,",
-    `BROMY TOUR'SANDTRAVELS ${E.taxi}`,
-  ];
-
-  return lines.join("\n");
+  return renderBookingMessage(booking);
 }
 
 export function buildWhatsAppShareUrl(mobile: string, message: string) {
@@ -567,77 +520,10 @@ export function buildWhatsAppShareUrl(mobile: string, message: string) {
   return `https://api.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(message)}`;
 }
 
-function assignedCarTypeName(line: AssignBookingLine) {
-  return (
-    line.car?.carType?.name ||
-    line.carType?.name ||
-    "-"
-  );
-}
-
-function assignedCarNumber(line: AssignBookingLine) {
-  return line.car?.car_number ?? "-";
-}
-
 export function buildDriverAssignMessage(booking: AssignBooking, lineIndex = 0) {
-  const line = booking.bookingCars?.[lineIndex];
-  if (!line) return "";
-
-  const from = booking.fromCity?.name ?? "-";
-  const to = booking.toCity?.name ?? "-";
-  const name = booking.customer?.name ?? "Customer";
-  const mobile = booking.customer?.mobile ?? "-";
-
-  return [
-    "New Trip Confirmed",
-    "",
-    `${from} to ${to}`,
-    `Date: ${formatShortDate(booking.pickup_date)}`,
-    `Time: ${formatTime12h(booking.pickup_date)}`,
-    `Trip Type: ${formatTripType(booking.trip_type)}`,
-    `Car: ${assignedCarTypeName(line)}`,
-    "",
-    `Customer: ${name}`,
-    `Contact: ${mobile}`,
-    "",
-    "Please confirm after receiving this trip detail.",
-    "",
-    "Thank you.",
-  ].join("\n");
+  return renderDriverMessage(booking, lineIndex);
 }
 
 export function buildAssignCustomerWhatsAppMessage(booking: AssignBooking) {
-  const from = booking.fromCity?.name ?? "-";
-  const to = booking.toCity?.name ?? "-";
-  const ticket = booking.ticket_no ?? "";
-  const lines = booking.bookingCars ?? [];
-
-  const vehicleBlocks = lines
-    .map((line, index) => {
-      const driverName = line.driver?.name ?? "-";
-      const driverMobile = line.driver?.mobile ?? "-";
-      return [
-        `Vehicle ${index + 1}:`,
-        `  Car: ${assignedCarTypeName(line)} — ${assignedCarNumber(line)}`,
-        `  Driver: ${driverName} — ${driverMobile}`,
-      ].join("\n");
-    })
-    .join("\n\n");
-
-  const parts = [
-    `Booking Assigned — ${ticket}`,
-    "",
-    `${from} to ${to}`,
-    `Date: ${formatShortDate(booking.pickup_date)} | Time: ${formatTime12h(booking.pickup_date)}`,
-    `Trip Type: ${formatTripType(booking.trip_type)}`,
-    "",
-    vehicleBlocks,
-  ];
-
-  if (booking.assign_note?.trim()) {
-    parts.push("", booking.assign_note.trim());
-  }
-
-  parts.push("", "Thank you.");
-  return parts.join("\n");
+  return renderAssignCustomerMessage(booking);
 }

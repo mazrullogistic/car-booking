@@ -11,13 +11,11 @@ import {
   PageHeader,
   Select,
   SuggestInput,
+  WhatsAppTemplatePicker,
   type SuggestOption,
 } from "@/components/admin";
 import {
   bookingsApi,
-  buildAssignCustomerWhatsAppMessage,
-  buildDriverAssignMessage,
-  buildWhatsAppShareUrl,
   capitalizeStatus,
   carTypesApi,
   carsApi,
@@ -298,14 +296,6 @@ export function AssignCarForm({ bookingId }: AssignCarFormProps) {
     }
   }
 
-  async function copyDriverMessage(index: number) {
-    if (!booking) return;
-    const message = buildDriverAssignMessage(booking, index);
-    await navigator.clipboard.writeText(message);
-    setCopyFeedback(index);
-    setTimeout(() => setCopyFeedback(null), 2000);
-  }
-
   if (loading) {
     return <p className="text-sm text-text-muted">Loading assignment...</p>;
   }
@@ -548,32 +538,32 @@ export function AssignCarForm({ bookingId }: AssignCarFormProps) {
           </h3>
           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
             {customerMobile && (
-              <a
-                href={buildWhatsAppShareUrl(
-                  customerMobile,
-                  buildAssignCustomerWhatsAppMessage(booking),
-                )}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full sm:w-auto"
-              >
-                <Button type="button" className="w-full sm:w-auto">
-                  Share to Customer
-                </Button>
-              </a>
+              <WhatsAppTemplatePicker
+                category="assign_customer"
+                booking={booking}
+                mobile={customerMobile}
+                buttonLabel="Share to Customer"
+                buttonVariant="primary"
+              />
             )}
             {assignments.map((_, index) => (
-              <Button
+              <WhatsAppTemplatePicker
                 key={index}
-                type="button"
-                variant="outline"
-                className="w-full sm:w-auto"
-                onClick={() => copyDriverMessage(index)}
-              >
-                {copyFeedback === index
-                  ? "Copied!"
-                  : `Copy Driver ${index + 1} Message`}
-              </Button>
+                category="assign_driver"
+                booking={booking}
+                lineIndex={index}
+                mode="copy"
+                buttonLabel={
+                  copyFeedback === index
+                    ? "Copied!"
+                    : `Copy Driver ${index + 1} Message`
+                }
+                buttonVariant="outline"
+                onCopied={() => {
+                  setCopyFeedback(index);
+                  setTimeout(() => setCopyFeedback(null), 2000);
+                }}
+              />
             ))}
           </div>
         </Card>
