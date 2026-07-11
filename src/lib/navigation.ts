@@ -34,7 +34,6 @@ export const masterNavItems: NavItem[] = [
   { label: "Branches", href: "/admin/masters/branches" },
   { label: "States", href: "/admin/masters/states" },
   { label: "Cities", href: "/admin/masters/cities" },
-  { label: "Branches", href: "/admin/masters/branches" },
   { label: "Car Types", href: "/admin/masters/car-types" },
   { label: "Drivers", href: "/admin/masters/drivers" },
   { label: "Vendors", href: "/admin/masters/vendors" },

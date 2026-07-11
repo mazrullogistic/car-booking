@@ -398,10 +398,12 @@ export function formatMoney(value?: number | string | null) {
 
 export function capitalizeStatus(status?: string | null) {
   if (!status) return "-";
+  if (String(status).toLowerCase() === "unassigned") return "Car Not Assigned";
   return status.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 const STATUS_COLORS: Record<string, string> = {
+  unassigned: "bg-info-light text-info",
   pending: "bg-warning-light text-warning",
   confirmed: "bg-primary-light text-primary",
   completed: "bg-success-light text-success",
@@ -434,6 +436,11 @@ export function formatTime12h(value?: string | Date | null) {
     hour12: true,
   });
   return formatted.replace(/\b(am|pm)\b/gi, (m) => m.toUpperCase());
+}
+
+export function formatPickupDateTime(value?: string | Date | null) {
+  if (!value) return "-";
+  return `${formatDate(value)} · ${formatTime12h(value)}`;
 }
 
 export function formatPaymentMode(value?: string | null) {

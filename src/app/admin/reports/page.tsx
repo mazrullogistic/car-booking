@@ -19,6 +19,7 @@ import {
   carsApi,
   driversApi,
   formatDate,
+  formatPickupDateTime,
   formatMoney,
   reportsApi,
   usersApi,
@@ -187,7 +188,7 @@ export default function ReportsPage() {
     {
       key: "pickup",
       header: "Pickup",
-      render: (row) => formatDate(row.pickup as string),
+      render: (row) => formatPickupDateTime(row.pickup as string),
     },
     {
       key: "status",
@@ -231,7 +232,7 @@ export default function ReportsPage() {
     {
       key: "pickup",
       header: "Pickup",
-      render: (row) => formatDate(row.pickup as string),
+      render: (row) => formatPickupDateTime(row.pickup as string),
     },
     {
       key: "commissionAmount",
@@ -275,6 +276,7 @@ export default function ReportsPage() {
           <Select
             label="Status"
             options={[
+              { value: "unassigned", label: "Car Not Assigned" },
               { value: "pending", label: "Pending" },
               { value: "confirmed", label: "Confirmed" },
               { value: "completed", label: "Completed" },

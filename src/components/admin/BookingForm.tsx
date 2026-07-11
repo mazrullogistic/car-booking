@@ -17,6 +17,7 @@ import {
   carTypesApi,
   citiesApi,
   customersApi,
+  capitalizeStatus,
   statusApi,
 } from "@/lib/services";
 
@@ -52,7 +53,7 @@ const emptyForm = {
   extra_amount: "0",
   paid_amount: "0",
   payment_type: "",
-  status: "pending",
+  status: "unassigned",
   remarks: "",
 };
 
@@ -149,6 +150,7 @@ export function BookingForm({
   const [statusOptions, setStatusOptions] = useState<
     { value: string; label: string }[]
   >([
+    { value: "unassigned", label: "Car Not Assigned" },
     { value: "pending", label: "Pending" },
     { value: "confirmed", label: "Confirmed" },
     { value: "completed", label: "Completed" },
@@ -198,7 +200,7 @@ export function BookingForm({
         setStatusOptions(
           statuses.map((s) => ({
             value: s.key,
-            label: s.name.charAt(0) + s.name.slice(1).toLowerCase(),
+            label: capitalizeStatus(s.key),
           })),
         ),
       )
@@ -272,7 +274,7 @@ export function BookingForm({
           extra_amount: String(row.extra_amount ?? "0"),
           paid_amount: String(row.paid_amount ?? "0"),
           payment_type: String(row.payment_type ?? ""),
-          status: String(row.status ?? "pending"),
+          status: String(row.status ?? "unassigned"),
           remarks: String(row.remarks ?? ""),
         });
         setPickupTime(time);

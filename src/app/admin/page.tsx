@@ -6,7 +6,7 @@ import { Alert, Card, PageHeader } from "@/components/admin";
 import {
   capitalizeStatus,
   dashboardApi,
-  formatDate,
+  formatPickupDateTime,
   formatMoney,
   statusBadgeClass,
 } from "@/lib/services";
@@ -134,9 +134,9 @@ function BookingTable({
                   </span>
                 </div>
                 <div className="flex items-start justify-between gap-3">
-                  <span className="text-text-secondary">Date</span>
-                  <span className="text-text-secondary">
-                    {formatDate(booking.pickup_date)}
+                  <span className="text-text-secondary">Pickup</span>
+                  <span className="text-right text-text-secondary">
+                    {formatPickupDateTime(booking.pickup_date)}
                   </span>
                 </div>
                 <div className="flex items-start justify-between gap-3">
@@ -167,7 +167,7 @@ function BookingTable({
                 Route
               </th>
               <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wider text-text-secondary">
-                Date
+                Pickup
               </th>
               <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wider text-text-secondary">
                 Status
@@ -198,7 +198,7 @@ function BookingTable({
                     {booking.toCity?.name ?? "?"}
                   </td>
                   <td className="px-5 py-3 text-text-secondary">
-                    {formatDate(booking.pickup_date)}
+                    {formatPickupDateTime(booking.pickup_date)}
                   </td>
                   <td className="px-5 py-3">
                     <span
