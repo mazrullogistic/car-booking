@@ -1,4 +1,9 @@
 import type { AssignBooking, AssignBookingLine } from "./services";
+import {
+  formatLongDate,
+  formatShortDate,
+  formatTime12h,
+} from "./pickupDate";
 
 export type WhatsappTemplateCategory =
   | "booking_confirm"
@@ -303,39 +308,6 @@ export const SAMPLE_BOOKING_VARS: Record<string, string> = {
   customer_mobile: "9123456780",
 };
 
-function formatLongDate(value?: string | Date | null) {
-  if (!value) return "-";
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return String(value);
-  return d.toLocaleDateString("en-IN", {
-    day: "2-digit",
-    month: "long",
-    year: "numeric",
-  });
-}
-
-function formatShortDate(value?: string | Date | null) {
-  if (!value) return "-";
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return String(value);
-  const day = String(d.getDate()).padStart(2, "0");
-  const month = String(d.getMonth() + 1).padStart(2, "0");
-  const year = d.getFullYear();
-  return `${day}/${month}/${year}`;
-}
-
-function formatTime12h(value?: string | Date | null) {
-  if (!value) return "-";
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return "-";
-  const formatted = d.toLocaleTimeString("en-IN", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: true,
-  });
-  return formatted.replace(/\b(am|pm)\b/gi, (m) => m.toUpperCase());
-}
-
 function formatMoney(value?: number | string | null) {
   const n = Number(value ?? 0);
   return `₹${n.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -358,3 +330,4 @@ function formatTripType(value?: string | null) {
   if (value === "round_trip") return "Round Trip";
   return value.replace(/_/g, " ");
 }
+

@@ -18,6 +18,8 @@ import {
   citiesApi,
   customersApi,
   capitalizeStatus,
+  combinePickupDateTime,
+  splitPickupDateTime,
   statusApi,
 } from "@/lib/services";
 
@@ -72,56 +74,6 @@ const MINUTE_OPTIONS = [0, 10, 20, 30, 40, 50].map((i) => {
   const m = String(i).padStart(2, "0");
   return { value: m, label: m };
 });
-
-function to24Hour(hour: string, period: "AM" | "PM") {
-  let h = Number(hour) || 12;
-  if (period === "AM") {
-    if (h === 12) h = 0;
-  } else if (h !== 12) {
-    h += 12;
-  }
-  return String(h).padStart(2, "0");
-}
-
-function combinePickupDateTime(date: string, time: PickupTime) {
-  if (!date) return date;
-  const hh = to24Hour(time.hour, time.period);
-  const mm = time.minute.padStart(2, "0");
-  return `${date}T${hh}:${mm}:00`;
-}
-
-function splitPickupDateTime(value?: string | null): {
-  date: string;
-  time: PickupTime;
-} {
-  if (!value) return { date: "", time: { ...defaultPickupTime } };
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) {
-    return {
-      date: String(value).slice(0, 10),
-      time: { ...defaultPickupTime },
-    };
-  }
-  let hours = d.getHours();
-  const snappedMinute = Math.round(d.getMinutes() / 10) * 10;
-  const minuteValue = snappedMinute === 60 ? 50 : snappedMinute;
-  const minutes = String(minuteValue).padStart(2, "0");
-  const period: "AM" | "PM" = hours >= 12 ? "PM" : "AM";
-  hours = hours % 12;
-  if (hours === 0) hours = 12;
-  return {
-    date: [
-      d.getFullYear(),
-      String(d.getMonth() + 1).padStart(2, "0"),
-      String(d.getDate()).padStart(2, "0"),
-    ].join("-"),
-    time: {
-      hour: String(hours),
-      minute: minutes,
-      period,
-    },
-  };
-}
 
 export function BookingForm({
   bookingId,

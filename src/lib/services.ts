@@ -4,6 +4,18 @@ import {
   renderBookingMessage,
   renderDriverMessage,
 } from "./whatsappTemplates";
+export {
+  combinePickupDateTime,
+  formatDate,
+  formatDateTime,
+  formatLongDate,
+  formatPickupDateTime,
+  formatShortDate,
+  formatTime12h,
+  parsePickupParts,
+  splitPickupDateTime,
+  type PickupParts,
+} from "./pickupDate";
 
 export type ListParams = {
   search?: string;
@@ -367,30 +379,6 @@ export const whatsappTemplatesApi = {
     ),
 };
 
-export function formatDate(value?: string | Date | null) {
-  if (!value) return "-";
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return String(value);
-  return d.toLocaleDateString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
-}
-
-export function formatDateTime(value?: string | Date | null) {
-  if (!value) return "-";
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return String(value);
-  return d.toLocaleString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
 export function formatMoney(value?: number | string | null) {
   const n = Number(value ?? 0);
   return `₹${n.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -415,34 +403,6 @@ export function statusBadgeClass(status?: string | null) {
   return STATUS_COLORS[String(status ?? "").toLowerCase()] ?? "bg-border-light text-text-secondary";
 }
 
-export function formatLongDate(value?: string | Date | null) {
-  if (!value) return "-";
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return String(value);
-  return d.toLocaleDateString("en-IN", {
-    day: "2-digit",
-    month: "long",
-    year: "numeric",
-  });
-}
-
-export function formatTime12h(value?: string | Date | null) {
-  if (!value) return "-";
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return "-";
-  const formatted = d.toLocaleTimeString("en-IN", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: true,
-  });
-  return formatted.replace(/\b(am|pm)\b/gi, (m) => m.toUpperCase());
-}
-
-export function formatPickupDateTime(value?: string | Date | null) {
-  if (!value) return "-";
-  return `${formatDate(value)} · ${formatTime12h(value)}`;
-}
-
 export function formatPaymentMode(value?: string | null) {
   if (!value) return "-";
   const labels: Record<string, string> = {
@@ -459,16 +419,6 @@ export function formatTripType(value?: string | null) {
   if (value === "one_way") return "One Way";
   if (value === "round_trip") return "Round Trip";
   return capitalizeStatus(value);
-}
-
-export function formatShortDate(value?: string | Date | null) {
-  if (!value) return "-";
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return String(value);
-  const day = String(d.getDate()).padStart(2, "0");
-  const month = String(d.getMonth() + 1).padStart(2, "0");
-  const year = d.getFullYear();
-  return `${day}/${month}/${year}`;
 }
 
 type WhatsAppBooking = {
