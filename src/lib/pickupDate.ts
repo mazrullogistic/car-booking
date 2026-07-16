@@ -1,3 +1,15 @@
+import dayjs from "dayjs";
+import customParseFormat from "dayjs/plugin/customParseFormat";
+import timezone from "dayjs/plugin/timezone";
+import utc from "dayjs/plugin/utc";
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+dayjs.extend(customParseFormat);
+
+const TZ = "Asia/Kolkata";
+const MYSQL_FMT = "YYYY-MM-DD HH:mm:ss";
+
 export type PickupParts = {
   year: number;
   month: number;
@@ -6,69 +18,56 @@ export type PickupParts = {
   minute: number;
 };
 
-const MONTHS_SHORT = [
-  "Jan",
-  "Feb",
-  "Mar",
-  "Apr",
-  "May",
-  "Jun",
-  "Jul",
-  "Aug",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dec",
-] as const;
+/** Keep date+time digits only so Z/offset cannot shift the wall clock. */
+function toNaiveMysql(value?: string | Date | null): string | null {
+  if (value == null || value === "") return null;
 
-const MONTHS_LONG = [
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December",
-] as const;
+  if (value instanceof Date) {
+    if (Number.isNaN(value.getTime())) return null;
+    return dayjs(value).tz(TZ).format(MYSQL_FMT);
+  }
 
-/** Read YYYY-MM-DD HH:mm clock digits; ignore Z/offset so listing matches entered time. */
+  const raw = String(value).trim().replace("T", " ");
+  const m = raw.match(
+    /^(\d{4}-\d{2}-\d{2})[ ](\d{2}):(\d{2})(?::(\d{2}))?/,
+  );
+  if (m) {
+    return `${m[1]} ${m[2]}:${m[3]}:${m[4] || "00"}`;
+  }
+
+  const dateOnly = raw.match(/^(\d{4}-\d{2}-\d{2})$/);
+  if (dateOnly) return `${dateOnly[1]} 00:00:00`;
+
+  const parsed = dayjs(value);
+  if (!parsed.isValid()) return null;
+  return parsed.tz(TZ).format(MYSQL_FMT);
+}
+
+function asKolkata(value?: string | Date | null) {
+  const naive = toNaiveMysql(value);
+  if (!naive) return null;
+  const d = dayjs.tz(naive, MYSQL_FMT, TZ);
+  return d.isValid() ? d : null;
+}
+
 export function parsePickupParts(
   value?: string | Date | null,
 ): PickupParts | null {
-  if (value == null || value === "") return null;
-
-  let raw: string;
-  if (value instanceof Date) {
-    if (Number.isNaN(value.getTime())) return null;
-    raw = value.toLocaleString("sv-SE", { timeZone: "Asia/Kolkata" });
-  } else {
-    raw = String(value);
-  }
-
-  const m = raw.match(
-    /(\d{4})-(\d{2})-(\d{2})(?:[T\s](\d{2}):(\d{2})(?::\d{2})?)?/,
-  );
-  if (!m) return null;
-
+  const d = asKolkata(value);
+  if (!d) return null;
   return {
-    year: Number(m[1]),
-    month: Number(m[2]),
-    day: Number(m[3]),
-    hour24: m[4] != null ? Number(m[4]) : 0,
-    minute: m[5] != null ? Number(m[5]) : 0,
+    year: d.year(),
+    month: d.month() + 1,
+    day: d.date(),
+    hour24: d.hour(),
+    minute: d.minute(),
   };
 }
 
 export function formatDate(value?: string | Date | null) {
-  const p = parsePickupParts(value);
-  if (!p) return value ? String(value) : "-";
-  const day = String(p.day).padStart(2, "0");
-  return `${day} ${MONTHS_SHORT[p.month - 1]} ${p.year}`;
+  const d = asKolkata(value);
+  if (!d) return value ? String(value) : "-";
+  return d.format("DD MMM YYYY");
 }
 
 export function formatDateTime(value?: string | Date | null) {
@@ -77,19 +76,15 @@ export function formatDateTime(value?: string | Date | null) {
 }
 
 export function formatLongDate(value?: string | Date | null) {
-  const p = parsePickupParts(value);
-  if (!p) return value ? String(value) : "-";
-  const day = String(p.day).padStart(2, "0");
-  return `${day} ${MONTHS_LONG[p.month - 1]} ${p.year}`;
+  const d = asKolkata(value);
+  if (!d) return value ? String(value) : "-";
+  return d.format("DD MMMM YYYY");
 }
 
 export function formatTime12h(value?: string | Date | null) {
-  const p = parsePickupParts(value);
-  if (!p) return "-";
-  let hour = p.hour24 % 12;
-  if (hour === 0) hour = 12;
-  const period = p.hour24 >= 12 ? "PM" : "AM";
-  return `${String(hour).padStart(2, "0")}:${String(p.minute).padStart(2, "0")} ${period}`;
+  const d = asKolkata(value);
+  if (!d) return "-";
+  return d.format("hh:mm A");
 }
 
 export function formatPickupDateTime(value?: string | Date | null) {
@@ -98,12 +93,12 @@ export function formatPickupDateTime(value?: string | Date | null) {
 }
 
 export function formatShortDate(value?: string | Date | null) {
-  const p = parsePickupParts(value);
-  if (!p) return value ? String(value) : "-";
-  return `${String(p.day).padStart(2, "0")}/${String(p.month).padStart(2, "0")}/${p.year}`;
+  const d = asKolkata(value);
+  if (!d) return value ? String(value) : "-";
+  return d.format("DD/MM/YYYY");
 }
 
-/** Build India-offset ISO so backend stores the selected clock time correctly. */
+/** Naive MySQL datetime in Asia/Kolkata wall clock (no UTC shift). */
 export function combinePickupDateTime(
   date: string,
   time: { hour: string; minute: string; period: "AM" | "PM" },
@@ -117,7 +112,9 @@ export function combinePickupDateTime(
   }
   const hh = String(h).padStart(2, "0");
   const mm = time.minute.padStart(2, "0");
-  return `${date}T${hh}:${mm}:00+05:30`;
+  return dayjs
+    .tz(`${date} ${hh}:${mm}:00`, MYSQL_FMT, TZ)
+    .format(MYSQL_FMT);
 }
 
 export function splitPickupDateTime(value?: string | null): {
@@ -127,28 +124,24 @@ export function splitPickupDateTime(value?: string | null): {
   const defaultTime = { hour: "12", minute: "00", period: "AM" as const };
   if (!value) return { date: "", time: { ...defaultTime } };
 
-  const p = parsePickupParts(value);
-  if (!p) {
+  const d = asKolkata(value);
+  if (!d) {
     return {
       date: String(value).slice(0, 10),
       time: { ...defaultTime },
     };
   }
 
-  let hours = p.hour24 % 12;
-  if (hours === 0) hours = 12;
-  const snappedMinute = Math.round(p.minute / 10) * 10;
+  let hour12 = d.hour() % 12;
+  if (hour12 === 0) hour12 = 12;
+  const snappedMinute = Math.round(d.minute() / 10) * 10;
   const minuteValue = snappedMinute === 60 ? 50 : snappedMinute;
-  const period: "AM" | "PM" = p.hour24 >= 12 ? "PM" : "AM";
+  const period: "AM" | "PM" = d.hour() >= 12 ? "PM" : "AM";
 
   return {
-    date: [
-      p.year,
-      String(p.month).padStart(2, "0"),
-      String(p.day).padStart(2, "0"),
-    ].join("-"),
+    date: d.format("YYYY-MM-DD"),
     time: {
-      hour: String(hours),
+      hour: String(hour12),
       minute: String(minuteValue).padStart(2, "0"),
       period,
     },
