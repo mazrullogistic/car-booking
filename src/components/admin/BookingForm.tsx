@@ -51,6 +51,9 @@ const emptyForm = {
   to_city_name: "",
   pickup_date: "",
   price_type: "lumpsum",
+  per_km_rate: "",
+  approx_km: "",
+  actual_km: "",
   booking_amount: "",
   extra_amount: "0",
   paid_amount: "0",
@@ -170,10 +173,16 @@ export function BookingForm({
     [carLines],
   );
 
+  const perKmRate = Number(form.per_km_rate) || 0;
+  const approxKm = Number(form.approx_km) || 0;
+  const actualKmRaw = form.actual_km.trim();
+  const actualKm =
+    actualKmRaw === "" ? null : Number(form.actual_km);
+  const effectiveKm =
+    actualKm != null && !Number.isNaN(actualKm) ? actualKm : approxKm;
+
   const extraAmount = Number(form.extra_amount) || 0;
-  const baseAmount = isPerKm
-    ? Number(form.booking_amount) || 0
-    : carPricesSum;
+  const baseAmount = isPerKm ? effectiveKm * perKmRate : carPricesSum;
   const totalBookingAmount = baseAmount + extraAmount;
 
   const nameSuggestions: SuggestOption[] = useMemo(
@@ -374,6 +383,18 @@ export function BookingForm({
           to_city_name: row.toCity?.name ?? "",
           pickup_date: date,
           price_type: priceType,
+          per_km_rate:
+            row.per_km_rate != null && row.per_km_rate !== ""
+              ? String(row.per_km_rate)
+              : "",
+          approx_km:
+            row.approx_km != null && row.approx_km !== ""
+              ? String(row.approx_km)
+              : "",
+          actual_km:
+            row.actual_km != null && row.actual_km !== ""
+              ? String(row.actual_km)
+              : "",
           booking_amount: String(row.booking_amount ?? ""),
           extra_amount: String(row.extra_amount ?? "0"),
           paid_amount: String(row.paid_amount ?? "0"),
@@ -395,6 +416,14 @@ export function BookingForm({
       const next = { ...prev, [name]: value };
       if (name === "trip_type" && value === "one_way") {
         next.price_type = "lumpsum";
+        next.per_km_rate = "";
+        next.approx_km = "";
+        next.actual_km = "";
+      }
+      if (name === "price_type" && value === "lumpsum") {
+        next.per_km_rate = "";
+        next.approx_km = "";
+        next.actual_km = "";
       }
       return next;
     });
@@ -461,15 +490,21 @@ export function BookingForm({
     }
 
     const priceType = isOneWay ? "lumpsum" : form.price_type;
-    const bookingAmount = isPerKm
-      ? Number(form.booking_amount) || 0
-      : carPricesSum;
 
-    if (isPerKm && bookingAmount <= 0) {
-      setError("Per KM price is required");
-      setLoading(false);
-      return;
+    if (isPerKm) {
+      if (perKmRate <= 0) {
+        setError("Per KM rate is required");
+        setLoading(false);
+        return;
+      }
+      if (approxKm <= 0) {
+        setError("Approx KM is required");
+        setLoading(false);
+        return;
+      }
     }
+
+    const bookingAmount = isPerKm ? effectiveKm * perKmRate : carPricesSum;
 
     try {
       const fromCityId = await resolveCityId(
@@ -488,6 +523,12 @@ export function BookingForm({
         pickup_date: combinePickupDateTime(form.pickup_date, pickupTime),
         num_cars: carLines.length,
         price_type: priceType,
+        per_km_rate: isPerKm ? perKmRate : null,
+        approx_km: isPerKm ? approxKm : null,
+        actual_km:
+          isPerKm && actualKm != null && !Number.isNaN(actualKm)
+            ? actualKm
+            : null,
         booking_amount: bookingAmount,
         extra_amount: Number(form.extra_amount) || 0,
         paid_amount: Number(form.paid_amount) || 0,
@@ -496,7 +537,7 @@ export function BookingForm({
         remarks: form.remarks || null,
         cars: carLines.map((line) => ({
           car_type_id: Number(line.car_type_id),
-          price: Number(line.price) || 0,
+          price: isPerKm ? 0 : Number(line.price) || 0,
         })),
       };
 
@@ -708,13 +749,17 @@ export function BookingForm({
                   required
                 />
                 <Input
-                  label={index === 0 ? "Car Price (₹)" : `Car Price #${index + 1} (₹)`}
+                  label={
+                    index === 0 ? "Car Price (₹)" : `Car Price #${index + 1} (₹)`
+                  }
                   type="number"
                   min="0"
                   step="0.01"
-                  value={line.price}
+                  value={isPerKm ? "" : line.price}
                   onChange={(e) => setCarLine(index, "price", e.target.value)}
                   required={!isPerKm}
+                  disabled={isPerKm}
+                  placeholder={isPerKm ? "—" : undefined}
                 />
                 <Button
                   type="button"
@@ -733,16 +778,39 @@ export function BookingForm({
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {isPerKm && (
-            <Input
-              label="Per KM Price (₹)"
-              type="number"
-              min="0"
-              step="0.01"
-              value={form.booking_amount}
-              onChange={(e) => setField("booking_amount", e.target.value)}
-              required
-              hint="Per KM price"
-            />
+            <>
+              <Input
+                label="Per KM Rate (₹)"
+                type="number"
+                min="0"
+                step="0.01"
+                value={form.per_km_rate}
+                onChange={(e) => setField("per_km_rate", e.target.value)}
+                required
+                hint="Rate charged per kilometer"
+              />
+              <Input
+                label="Approx KM"
+                type="number"
+                min="0"
+                step="0.01"
+                value={form.approx_km}
+                onChange={(e) => setField("approx_km", e.target.value)}
+                required
+                hint="Round-trip total km (estimate). Update Actual KM after the trip."
+              />
+              {isEdit && (
+                <Input
+                  label="Actual KM"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={form.actual_km}
+                  onChange={(e) => setField("actual_km", e.target.value)}
+                  hint="Enter exact km after the trip to finalize fare"
+                />
+              )}
+            </>
           )}
           <Input
             label="Extra Amount (₹)"
@@ -761,7 +829,9 @@ export function BookingForm({
             readOnly
             hint={
               isPerKm
-                ? "Per KM price + extra amount"
+                ? actualKm != null && !Number.isNaN(actualKm)
+                  ? "Actual KM × Per KM rate + extra"
+                  : "Approx KM × Per KM rate + extra (provisional)"
                 : "Car prices + extra amount"
             }
           />
