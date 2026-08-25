@@ -17,9 +17,7 @@ import {
   carTypesApi,
   citiesApi,
   customersApi,
-  capitalizeStatus,
-  combinePickupDateTime,
-  splitPickupDateTime,
+  statesApi,
   statusApi,
 } from "@/lib/services";
 
@@ -48,14 +46,16 @@ const emptyForm = {
   customer_mobile: "",
   trip_type: "one_way",
   from_city_id: "",
+  from_city_name: "",
   to_city_id: "",
+  to_city_name: "",
   pickup_date: "",
   price_type: "lumpsum",
   booking_amount: "",
   extra_amount: "0",
   paid_amount: "0",
   payment_type: "",
-  status: "unassigned",
+  status: "pending",
   remarks: "",
 };
 
@@ -75,6 +75,56 @@ const MINUTE_OPTIONS = [0, 10, 20, 30, 40, 50].map((i) => {
   return { value: m, label: m };
 });
 
+function to24Hour(hour: string, period: "AM" | "PM") {
+  let h = Number(hour) || 12;
+  if (period === "AM") {
+    if (h === 12) h = 0;
+  } else if (h !== 12) {
+    h += 12;
+  }
+  return String(h).padStart(2, "0");
+}
+
+function combinePickupDateTime(date: string, time: PickupTime) {
+  if (!date) return date;
+  const hh = to24Hour(time.hour, time.period);
+  const mm = time.minute.padStart(2, "0");
+  return `${date}T${hh}:${mm}:00`;
+}
+
+function splitPickupDateTime(value?: string | null): {
+  date: string;
+  time: PickupTime;
+} {
+  if (!value) return { date: "", time: { ...defaultPickupTime } };
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) {
+    return {
+      date: String(value).slice(0, 10),
+      time: { ...defaultPickupTime },
+    };
+  }
+  let hours = d.getHours();
+  const snappedMinute = Math.round(d.getMinutes() / 10) * 10;
+  const minuteValue = snappedMinute === 60 ? 50 : snappedMinute;
+  const minutes = String(minuteValue).padStart(2, "0");
+  const period: "AM" | "PM" = hours >= 12 ? "PM" : "AM";
+  hours = hours % 12;
+  if (hours === 0) hours = 12;
+  return {
+    date: [
+      d.getFullYear(),
+      String(d.getMonth() + 1).padStart(2, "0"),
+      String(d.getDate()).padStart(2, "0"),
+    ].join("-"),
+    time: {
+      hour: String(hours),
+      minute: minutes,
+      period,
+    },
+  };
+}
+
 export function BookingForm({
   bookingId,
   backHref = "/admin/bookings",
@@ -93,18 +143,19 @@ export function BookingForm({
   const [branchOptions, setBranchOptions] = useState<
     { value: string; label: string }[]
   >([]);
-  const [cityOptions, setCityOptions] = useState<
-    { value: string; label: string }[]
+  const [cities, setCities] = useState<
+    { id: number; name: string; state_id?: number }[]
   >([]);
+  const [defaultStateId, setDefaultStateId] = useState<number | null>(null);
   const [carTypeOptions, setCarTypeOptions] = useState<
     { value: string; label: string }[]
   >([]);
   const [statusOptions, setStatusOptions] = useState<
     { value: string; label: string }[]
   >([
-    { value: "unassigned", label: "Car Not Assigned" },
-    { value: "pending", label: "Pending" },
-    { value: "confirmed", label: "Confirmed" },
+    { value: "pending", label: "Unassigned" },
+    { value: "car_assigned", label: "Assigned Car" },
+    { value: "confirmed", label: "Assigned Car" },
     { value: "completed", label: "Completed" },
     { value: "cancelled", label: "Cancelled" },
   ]);
@@ -145,6 +196,36 @@ export function BookingForm({
     [customers],
   );
 
+  const citySuggestions: SuggestOption[] = useMemo(
+    () =>
+      cities.map((c) => ({
+        value: String(c.id),
+        label: c.name,
+        meta: { id: String(c.id) },
+      })),
+    [cities],
+  );
+
+  function applyCitySuggestion(
+    field: "from" | "to",
+    name: string,
+    id: string,
+  ) {
+    if (field === "from") {
+      setForm((prev) => ({
+        ...prev,
+        from_city_id: id,
+        from_city_name: name,
+      }));
+      return;
+    }
+    setForm((prev) => ({
+      ...prev,
+      to_city_id: id,
+      to_city_name: name,
+    }));
+  }
+
   useEffect(() => {
     statusApi
       .list()
@@ -152,7 +233,7 @@ export function BookingForm({
         setStatusOptions(
           statuses.map((s) => ({
             value: s.key,
-            label: capitalizeStatus(s.key),
+            label: s.name.charAt(0) + s.name.slice(1).toLowerCase(),
           })),
         ),
       )
@@ -163,11 +244,22 @@ export function BookingForm({
       citiesApi.list({ limit: 500 }),
       carTypesApi.list({ limit: 100 }),
       customersApi.list({ limit: 500 }),
-    ]).then(([branches, cities, carTypes, customerRows]) => {
+      statesApi.list({ limit: 50 }),
+    ]).then(([branches, cityRows, carTypes, customerRows, states]) => {
       setBranchOptions(
         branches.map((b) => ({ value: String(b.id), label: b.name })),
       );
-      setCityOptions(cities.map((c) => ({ value: String(c.id), label: c.name })));
+      setCities(
+        cityRows.map((c) => ({
+          id: c.id,
+          name: c.name,
+          state_id: c.state_id,
+        })),
+      );
+      setDefaultStateId(
+        cityRows[0]?.state_id ??
+          (states[0] ? Number(states[0].id) : null),
+      );
       setCarTypeOptions(
         carTypes.map((c) => ({ value: String(c.id), label: c.name })),
       );
@@ -181,6 +273,62 @@ export function BookingForm({
     });
   }, []);
 
+  async function resolveCityId(
+    cityId: string,
+    cityName: string,
+  ): Promise<number> {
+    const name = cityName.trim();
+    if (cityId) return Number(cityId);
+
+    const existing = cities.find(
+      (c) => c.name.toLowerCase() === name.toLowerCase(),
+    );
+    if (existing) return existing.id;
+
+    if (!defaultStateId) {
+      throw new Error(
+        "Cannot create city: add at least one state in Masters first",
+      );
+    }
+
+    const created = (await citiesApi.create({
+      name,
+      state_id: defaultStateId,
+    })) as { id?: number; name?: string; state_id?: number } | undefined;
+
+    let resolvedId = created?.id;
+    let resolvedName = created?.name ?? name;
+    let resolvedStateId = created?.state_id ?? defaultStateId;
+
+    // Fallback if API response shape is unexpected
+    if (!resolvedId) {
+      const refreshed = await citiesApi.list({ search: name, limit: 100 });
+      const match = refreshed.find(
+        (c) => c.name.toLowerCase() === name.toLowerCase(),
+      );
+      if (!match) {
+        throw new Error("Failed to create or find city in master");
+      }
+      resolvedId = match.id;
+      resolvedName = match.name;
+      resolvedStateId = match.state_id;
+    }
+
+    setCities((prev) => {
+      if (prev.some((c) => c.id === resolvedId)) return prev;
+      return [
+        ...prev,
+        {
+          id: resolvedId!,
+          name: resolvedName,
+          state_id: resolvedStateId,
+        },
+      ];
+    });
+
+    return resolvedId;
+  }
+
   useEffect(() => {
     if (!bookingId) return;
     setPageLoading(true);
@@ -189,6 +337,8 @@ export function BookingForm({
       .then((b) => {
         const row = b as Record<string, unknown> & {
           customer?: { name?: string; mobile?: string };
+          fromCity?: { id?: number; name?: string };
+          toCity?: { id?: number; name?: string };
           bookingCars?: { car_type_id: number; price: number }[];
         };
         const tripType = String(row.trip_type ?? "one_way");
@@ -218,15 +368,17 @@ export function BookingForm({
           customer_name: row.customer?.name ?? "",
           customer_mobile: row.customer?.mobile ?? "",
           trip_type: tripType,
-          from_city_id: String(row.from_city_id ?? ""),
-          to_city_id: String(row.to_city_id ?? ""),
+          from_city_id: String(row.from_city_id ?? row.fromCity?.id ?? ""),
+          from_city_name: row.fromCity?.name ?? "",
+          to_city_id: String(row.to_city_id ?? row.toCity?.id ?? ""),
+          to_city_name: row.toCity?.name ?? "",
           pickup_date: date,
           price_type: priceType,
           booking_amount: String(row.booking_amount ?? ""),
           extra_amount: String(row.extra_amount ?? "0"),
           paid_amount: String(row.paid_amount ?? "0"),
           payment_type: String(row.payment_type ?? ""),
-          status: String(row.status ?? "unassigned"),
+          status: String(row.status ?? "pending"),
           remarks: String(row.remarks ?? ""),
         });
         setPickupTime(time);
@@ -290,6 +442,12 @@ export function BookingForm({
       return;
     }
 
+    if (!form.from_city_name.trim() || !form.to_city_name.trim()) {
+      setError("From city and To city are required");
+      setLoading(false);
+      return;
+    }
+
     if (carLines.some((line) => !line.car_type_id)) {
       setError("Please select car type for every car");
       setLoading(false);
@@ -313,29 +471,35 @@ export function BookingForm({
       return;
     }
 
-    const body: Record<string, unknown> = {
-      branch_id: Number(form.branch_id),
-      customer_name: form.customer_name.trim(),
-      customer_mobile: form.customer_mobile.trim(),
-      trip_type: form.trip_type,
-      from_city_id: Number(form.from_city_id),
-      to_city_id: Number(form.to_city_id),
-      pickup_date: combinePickupDateTime(form.pickup_date, pickupTime),
-      num_cars: carLines.length,
-      price_type: priceType,
-      booking_amount: bookingAmount,
-      extra_amount: Number(form.extra_amount) || 0,
-      paid_amount: Number(form.paid_amount) || 0,
-      payment_type: form.payment_type || null,
-      status: form.status,
-      remarks: form.remarks || null,
-      cars: carLines.map((line) => ({
-        car_type_id: Number(line.car_type_id),
-        price: Number(line.price) || 0,
-      })),
-    };
-
     try {
+      const fromCityId = await resolveCityId(
+        form.from_city_id,
+        form.from_city_name,
+      );
+      const toCityId = await resolveCityId(form.to_city_id, form.to_city_name);
+
+      const body: Record<string, unknown> = {
+        branch_id: Number(form.branch_id),
+        customer_name: form.customer_name.trim(),
+        customer_mobile: form.customer_mobile.trim(),
+        trip_type: form.trip_type,
+        from_city_id: fromCityId,
+        to_city_id: toCityId,
+        pickup_date: combinePickupDateTime(form.pickup_date, pickupTime),
+        num_cars: carLines.length,
+        price_type: priceType,
+        booking_amount: bookingAmount,
+        extra_amount: Number(form.extra_amount) || 0,
+        paid_amount: Number(form.paid_amount) || 0,
+        payment_type: form.payment_type || null,
+        status: form.status,
+        remarks: form.remarks || null,
+        cars: carLines.map((line) => ({
+          car_type_id: Number(line.car_type_id),
+          price: Number(line.price) || 0,
+        })),
+      };
+
       if (isEdit && bookingId) {
         await bookingsApi.update(bookingId, body);
       } else {
@@ -343,7 +507,13 @@ export function BookingForm({
       }
       window.location.href = backHref;
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Save failed");
+      setError(
+        err instanceof ApiError
+          ? err.message
+          : err instanceof Error
+            ? err.message
+            : "Save failed",
+      );
       setLoading(false);
     }
   }
@@ -408,18 +578,40 @@ export function BookingForm({
             onChange={(e) => setField("trip_type", e.target.value)}
             required
           />
-          <Select
+          <SuggestInput
             label="From City"
-            options={cityOptions}
-            value={form.from_city_id}
-            onChange={(e) => setField("from_city_id", e.target.value)}
+            placeholder="Type or select from city"
+            value={form.from_city_name}
+            options={citySuggestions}
+            filterKeys={["label"]}
+            onChange={(e) =>
+              setForm((prev) => ({
+                ...prev,
+                from_city_name: e.target.value,
+                from_city_id: "",
+              }))
+            }
+            onSelectOption={(opt) =>
+              applyCitySuggestion("from", opt.label, opt.value)
+            }
             required
           />
-          <Select
+          <SuggestInput
             label="To City"
-            options={cityOptions}
-            value={form.to_city_id}
-            onChange={(e) => setField("to_city_id", e.target.value)}
+            placeholder="Type or select to city"
+            value={form.to_city_name}
+            options={citySuggestions}
+            filterKeys={["label"]}
+            onChange={(e) =>
+              setForm((prev) => ({
+                ...prev,
+                to_city_name: e.target.value,
+                to_city_id: "",
+              }))
+            }
+            onSelectOption={(opt) =>
+              applyCitySuggestion("to", opt.label, opt.value)
+            }
             required
           />
           <Input

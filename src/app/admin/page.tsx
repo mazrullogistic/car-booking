@@ -1,12 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ApiError } from "@/lib/api";
-import { Alert, Card, PageHeader } from "@/components/admin";
+import { Alert, Card, PageHeader, Select } from "@/components/admin";
 import {
+  bookingsApi,
   capitalizeStatus,
   dashboardApi,
-  formatPickupDateTime,
+  formatDate,
+  formatDateTime,
   formatMoney,
   statusBadgeClass,
 } from "@/lib/services";
@@ -21,26 +25,141 @@ type BookingSummary = Record<string, unknown> & {
   toCity?: { name: string };
 };
 
+type DateRangeFilter = "all" | "today" | "week" | "month";
+
+const UPCOMING_OPTIONS = [
+  { value: "today", label: "Today" },
+  { value: "week", label: "This Week" },
+];
+
+const RECENT_OPTIONS = [
+  { value: "all", label: "All" },
+  { value: "today", label: "Today" },
+  { value: "week", label: "This Week" },
+  { value: "month", label: "This Month" },
+];
+
+function toDateInput(d: Date) {
+  return [
+    d.getFullYear(),
+    String(d.getMonth() + 1).padStart(2, "0"),
+    String(d.getDate()).padStart(2, "0"),
+  ].join("-");
+}
+
+/** Today = local day; This Week = Mon–Sun; This Month = 1st–last of month */
+function getDateBounds(range: Exclude<DateRangeFilter, "all">) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  if (range === "week") {
+    const day = today.getDay(); // 0 Sun … 6 Sat
+    const daysFromMonday = day === 0 ? 6 : day - 1;
+    const weekStart = new Date(today);
+    weekStart.setDate(today.getDate() - daysFromMonday);
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 6);
+    return { from: weekStart, to: weekEnd };
+  }
+
+  if (range === "month") {
+    const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+    const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+    return { from: monthStart, to: monthEnd };
+  }
+
+  return { from: today, to: today };
+}
+
+function sortByLatestPickup(rows: BookingSummary[]) {
+  return [...rows].sort(
+    (a, b) =>
+      new Date(b.pickup_date).getTime() - new Date(a.pickup_date).getTime(),
+  );
+}
+
+async function fetchBookingsByRange(range: DateRangeFilter) {
+  const params =
+    range === "all"
+      ? { limit: 100 }
+      : (() => {
+          const { from, to } = getDateBounds(range);
+          return {
+            from_date: toDateInput(from),
+            to_date: toDateInput(to),
+            limit: 100,
+          };
+        })();
+
+  const rows = (await bookingsApi.list(params)) as BookingSummary[];
+
+  return sortByLatestPickup(
+    rows.filter((row) => String(row.status).toLowerCase() !== "cancelled"),
+  );
+}
+
 export default function AdminDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [kpis, setKpis] = useState<Record<string, number>>({});
   const [recentBookings, setRecentBookings] = useState<BookingSummary[]>([]);
   const [upcomingPickups, setUpcomingPickups] = useState<BookingSummary[]>([]);
+  const [upcomingRange, setUpcomingRange] = useState<"today" | "week">("today");
+  const [recentRange, setRecentRange] = useState<DateRangeFilter>("all");
 
   useEffect(() => {
-    dashboardApi
-      .stats()
-      .then((data) => {
+    let cancelled = false;
+    Promise.all([
+      dashboardApi.stats({ upcoming: "today" }),
+      fetchBookingsByRange("today"),
+      fetchBookingsByRange("all"),
+    ])
+      .then(([data, upcoming, recent]) => {
+        if (cancelled) return;
         setKpis(data.kpis);
-        setRecentBookings(data.recentBookings as BookingSummary[]);
-        setUpcomingPickups(data.upcomingPickups as BookingSummary[]);
+        setUpcomingPickups(upcoming);
+        setRecentBookings(recent);
       })
-      .catch((err) =>
-        setError(err instanceof ApiError ? err.message : "Failed to load dashboard"),
-      )
-      .finally(() => setLoading(false));
+      .catch((err) => {
+        if (cancelled) return;
+        setError(err instanceof ApiError ? err.message : "Failed to load dashboard");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
+
+  async function handleUpcomingRangeChange(value: string) {
+    if (value !== "today" && value !== "week") return;
+    setUpcomingRange(value);
+    setError("");
+    try {
+      setUpcomingPickups(await fetchBookingsByRange(value));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Failed to load pickups");
+    }
+  }
+
+  async function handleRecentRangeChange(value: string) {
+    if (
+      value !== "all" &&
+      value !== "today" &&
+      value !== "week" &&
+      value !== "month"
+    ) {
+      return;
+    }
+    setRecentRange(value);
+    setError("");
+    try {
+      setRecentBookings(await fetchBookingsByRange(value));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Failed to load bookings");
+    }
+  }
 
   const statCards = [
     { label: "Total Bookings", value: kpis.bookings ?? 0, color: "text-primary" },
@@ -90,8 +209,35 @@ export default function AdminDashboardPage() {
       </div>
 
       <div className="mb-6 grid gap-6 lg:grid-cols-2">
-        <BookingTable title="Upcoming Pickups" rows={upcomingPickups} />
-        <BookingTable title="Recent Bookings" rows={recentBookings} />
+        <BookingTable
+          title="Upcoming Pickups"
+          rows={upcomingPickups}
+          showDateTime
+          headerAction={
+            <div className="w-40 shrink-0">
+              <Select
+                options={UPCOMING_OPTIONS}
+                value={upcomingRange}
+                placeholder=""
+                aria-label="Upcoming pickups filter"
+                className="h-9"
+                onChange={(e) => handleUpcomingRangeChange(e.target.value)}
+              />
+            </div>
+          }
+        />
+        <BookingTable title="Recent Bookings" rows={recentBookings} showDateTime headerAction={
+            <div className="w-40 shrink-0">
+              <Select
+                options={RECENT_OPTIONS}
+                value={recentRange}
+                placeholder=""
+                aria-label="Recent bookings filter"
+                className="h-9"
+                onChange={(e) => handleRecentRangeChange(e.target.value)}
+              />
+            </div>
+          } />
       </div>
     </>
   );
@@ -100,14 +246,26 @@ export default function AdminDashboardPage() {
 function BookingTable({
   title,
   rows,
+  showDateTime = false,
+  headerAction,
 }: {
   title: string;
   rows: BookingSummary[];
+  showDateTime?: boolean;
+  headerAction?: React.ReactNode;
 }) {
+  const router = useRouter();
+  const formatPickup = showDateTime ? formatDateTime : formatDate;
+
+  function openBooking(id: number) {
+    router.push(`/admin/bookings/${id}/edit`);
+  }
+
   return (
     <Card padding="none">
-      <div className="border-b border-border px-4 py-4 sm:px-5">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-4 sm:px-5">
         <h2 className="text-base font-semibold text-text-primary">{title}</h2>
+        {headerAction}
       </div>
 
       <div className="md:hidden">
@@ -116,7 +274,11 @@ function BookingTable({
         ) : (
           <div className="divide-y divide-border">
             {rows.map((booking) => (
-              <article key={booking.id} className="space-y-2 p-4 text-sm">
+              <Link
+                key={booking.id}
+                href={`/admin/bookings/${booking.id}/edit`}
+                className="block space-y-2 p-4 text-sm transition-colors hover:bg-border-light/40"
+              >
                 <div className="flex items-start justify-between gap-3">
                   <span className="text-text-secondary">Ticket</span>
                   <span className="font-medium text-primary">{booking.ticket_no}</span>
@@ -134,9 +296,11 @@ function BookingTable({
                   </span>
                 </div>
                 <div className="flex items-start justify-between gap-3">
-                  <span className="text-text-secondary">Pickup</span>
+                  <span className="text-text-secondary">
+                    {showDateTime ? "Date & Time" : "Date"}
+                  </span>
                   <span className="text-right text-text-secondary">
-                    {formatPickupDateTime(booking.pickup_date)}
+                    {formatPickup(booking.pickup_date)}
                   </span>
                 </div>
                 <div className="flex items-start justify-between gap-3">
@@ -147,7 +311,7 @@ function BookingTable({
                     {capitalizeStatus(booking.status)}
                   </span>
                 </div>
-              </article>
+              </Link>
             ))}
           </div>
         )}
@@ -167,7 +331,7 @@ function BookingTable({
                 Route
               </th>
               <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wider text-text-secondary">
-                Pickup
+                {showDateTime ? "Date & Time" : "Date"}
               </th>
               <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wider text-text-secondary">
                 Status
@@ -186,9 +350,27 @@ function BookingTable({
               </tr>
             ) : (
               rows.map((booking) => (
-                <tr key={booking.id} className="hover:bg-border-light/40">
+                <tr
+                  key={booking.id}
+                  role="link"
+                  tabIndex={0}
+                  className="cursor-pointer hover:bg-border-light/40"
+                  onClick={() => openBooking(booking.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      openBooking(booking.id);
+                    }
+                  }}
+                >
                   <td className="px-5 py-3 font-medium text-primary">
-                    {booking.ticket_no}
+                    <Link
+                      href={`/admin/bookings/${booking.id}/edit`}
+                      className="hover:underline"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {booking.ticket_no}
+                    </Link>
                   </td>
                   <td className="px-5 py-3 text-text-primary">
                     {booking.customer?.name ?? "-"}
@@ -197,8 +379,8 @@ function BookingTable({
                     {booking.fromCity?.name ?? "?"} →{" "}
                     {booking.toCity?.name ?? "?"}
                   </td>
-                  <td className="px-5 py-3 text-text-secondary">
-                    {formatPickupDateTime(booking.pickup_date)}
+                  <td className="px-5 py-3 whitespace-nowrap text-text-secondary">
+                    {formatPickup(booking.pickup_date)}
                   </td>
                   <td className="px-5 py-3">
                     <span

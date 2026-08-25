@@ -19,7 +19,7 @@ import {
   buildBookingWhatsAppMessage,
   buildWhatsAppShareUrl,
   capitalizeStatus,
-  formatPickupDateTime,
+  formatDate,
   formatMoney,
   statusApi,
   statusBadgeClass,
@@ -51,9 +51,9 @@ export default function BookingsPage() {
   const [statusOptions, setStatusOptions] = useState<
     { value: string; label: string }[]
   >([
-    { value: "unassigned", label: "Car Not Assigned" },
-    { value: "pending", label: "Pending" },
-    { value: "confirmed", label: "Confirmed" },
+    { value: "pending", label: "Unassigned" },
+    { value: "car_assigned", label: "Assigned Car" },
+    { value: "confirmed", label: "Assigned Car" },
     { value: "completed", label: "Completed" },
     { value: "cancelled", label: "Cancelled" },
   ]);
@@ -138,7 +138,7 @@ export default function BookingsPage() {
     {
       key: "pickup_date",
       header: "Pickup",
-      render: (row) => formatPickupDateTime(row.pickup_date),
+      render: (row) => formatDate(row.pickup_date),
     },
     {
       key: "status",
