@@ -4,7 +4,6 @@ import { useCallback, useEffect, useState } from "react";
 import { ApiError } from "@/lib/api";
 import {
   Alert,
-  AnchorButton,
   Button,
   Card,
   DataTable,
@@ -17,10 +16,10 @@ import {
 import {
   bookingsApi,
   buildBookingWhatsAppMessage,
-  buildWhatsAppShareUrl,
   capitalizeStatus,
   formatDate,
   formatMoney,
+  openWhatsAppShare,
   statusApi,
   statusBadgeClass,
 } from "@/lib/services";
@@ -197,18 +196,15 @@ export default function BookingsPage() {
               Delete
             </Button>
             {mobile && (
-              <AnchorButton
-                href={buildWhatsAppShareUrl(
-                  mobile,
-                  buildBookingWhatsAppMessage(row),
-                )}
-                target="_blank"
-                rel="noopener noreferrer"
+              <Button
                 size="sm"
                 variant="success"
+                onClick={() =>
+                  openWhatsAppShare(mobile, buildBookingWhatsAppMessage(row))
+                }
               >
                 WhatsApp
-              </AnchorButton>
+              </Button>
             )}
           </div>
         );

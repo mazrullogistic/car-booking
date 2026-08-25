@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { AnchorButton, Button } from "./Button";
+import { Button } from "./Button";
 import {
   getDefaultTemplate,
   getLastPickedTemplateId,
@@ -16,7 +16,7 @@ import {
   type WhatsappTemplateCategory,
 } from "@/lib/whatsappTemplates";
 import {
-  buildWhatsAppShareUrl,
+  openWhatsAppShare,
   type AssignBooking,
 } from "@/lib/services";
 
@@ -107,7 +107,6 @@ export function WhatsAppTemplatePicker({
   const selected = selectedId ? getTemplateById(selectedId) : null;
 
   function buildMessage(template = selected) {
-    if (!template) return "";
     if (category === "booking_confirm") {
       return renderBookingMessage(booking as BookingLike, template);
     }
@@ -123,7 +122,7 @@ export function WhatsAppTemplatePicker({
     setOpen(false);
 
     const template = getTemplateById(id);
-    const message = buildMessage(template ?? undefined);
+    const message = buildMessage(template ?? undefined).trim();
     if (!message) return;
 
     if (mode === "copy") {
@@ -132,7 +131,7 @@ export function WhatsAppTemplatePicker({
     }
 
     if (mobile) {
-      window.open(buildWhatsAppShareUrl(mobile, message), "_blank", "noopener,noreferrer");
+      openWhatsAppShare(mobile, message);
     }
   }
 
@@ -154,7 +153,6 @@ export function WhatsAppTemplatePicker({
   }
 
   if (templates.length === 1) {
-    const message = buildMessage(templates[0]);
     if (mode === "copy") {
       return (
         <Button
@@ -163,6 +161,8 @@ export function WhatsAppTemplatePicker({
           variant="outline"
           className="w-full sm:w-auto"
           onClick={() => {
+            const message = buildMessage(templates[0]).trim();
+            if (!message) return;
             void navigator.clipboard.writeText(message).then(() => onCopied?.());
           }}
         >
@@ -172,15 +172,18 @@ export function WhatsAppTemplatePicker({
     }
     if (!mobile) return null;
     return (
-      <AnchorButton
-        href={buildWhatsAppShareUrl(mobile, message)}
-        target="_blank"
-        rel="noopener noreferrer"
+      <Button
+        type="button"
         size={size}
         variant={buttonVariant}
+        onClick={() => {
+          const message = buildMessage(templates[0]).trim();
+          if (!message) return;
+          openWhatsAppShare(mobile, message);
+        }}
       >
         {buttonLabel}
-      </AnchorButton>
+      </Button>
     );
   }
 

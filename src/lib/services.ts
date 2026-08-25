@@ -521,8 +521,28 @@ export function buildBookingWhatsAppMessage(booking: WhatsAppBooking) {
 export function buildWhatsAppShareUrl(mobile: string, message: string) {
   const digits = mobile.replace(/\D/g, "");
   const phone = digits.startsWith("91") ? digits : `91${digits}`;
-  // api.whatsapp.com handles UTF-8 emoji text more reliably than wa.me alone
-  return `https://api.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(message)}`;
+  // wa.me is more reliable on mobile browsers / WebViews than api.whatsapp.com
+  return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+}
+
+function isCoarsePointerDevice() {
+  if (typeof window === "undefined") return false;
+  return (
+    window.matchMedia("(pointer: coarse)").matches ||
+    window.matchMedia("(max-width: 768px)").matches
+  );
+}
+
+/** Open WhatsApp with prefilled text; avoids stale empty hrefs and blank mobile chats. */
+export function openWhatsAppShare(mobile: string, message: string) {
+  const text = message.trim();
+  if (!text || typeof window === "undefined") return;
+  const url = buildWhatsAppShareUrl(mobile, text);
+  if (isCoarsePointerDevice()) {
+    window.location.assign(url);
+    return;
+  }
+  window.open(url, "_blank", "noopener,noreferrer");
 }
 
 export function buildDriverAssignMessage(booking: AssignBooking, lineIndex = 0) {

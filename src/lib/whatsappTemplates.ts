@@ -250,23 +250,108 @@ export function buildDriverVars(booking: AssignBooking, lineIndex = 0) {
   };
 }
 
+/** Used when template cache is empty so share never opens with blank text. */
+export const FALLBACK_BOOKING_CONFIRM_BODY = `========================
+     ✦ BOOKING CONFIRMED ✦
+========================
+
+Hello {{customer_name}} 👋
+
+Great news! Your ride has been successfully reserved. 🚗
+
+Here is everything you need for your upcoming journey:
+
+📍 {{from_city}}  --->  {{to_city}}
+
+📅 Date        | {{pickup_date}}
+🕒 Pickup      | {{pickup_time}}
+🚦 Journey     | {{trip_type}}
+🚗 Vehicle     | {{vehicle}}
+
+========================
+
+         💳 FARE DETAILS
+
+🚕 Vehicle Fare      {{vehicle_fare}}
+➕ Extra Amount      {{extra_amount}}
+------------------------
+💰 Total Amount      {{total_amount}}
+
+💵 Advance Paid      {{advance_paid}}
+💳 Balance Due       {{balance_due}}
+
+Payment Mode: {{payment_mode}}
+
+========================
+
+       🟢 BOOKING CONFIRMED
+
+Your vehicle has been reserved for the selected date and journey.
+
+🚗 WHAT HAPPENS NEXT?
+
+Your driver name, contact number, vehicle number, and assigned car details will be shared with you one day before your journey.
+
+========================
+
+📌 TRAVEL NOTE
+
+Please review the journey details above. If you need to update your pickup time, location, or any other booking information, contact us as early as possible.
+
+Sit back, relax, and leave the journey to us. ✨
+
+Thank you for travelling with us. 🤝
+
+Safe Roads • Comfortable Rides • Reliable Service
+
+Warm Regards,
+{{company_name}} 🚕`;
+
+export const FALLBACK_ASSIGN_CUSTOMER_BODY = `Booking Assigned — {{ticket_no}}
+
+{{from_city}} to {{to_city}}
+Date: {{pickup_date}} | Time: {{pickup_time}}
+Trip Type: {{trip_type}}
+
+{{vehicle_blocks}}{{assign_note_block}}
+
+Thank you.`;
+
+export const FALLBACK_ASSIGN_DRIVER_BODY = `New Trip Confirmed
+
+{{from_city}} to {{to_city}}
+Date: {{pickup_date}}
+Time: {{pickup_time}}
+Trip Type: {{trip_type}}
+Car: {{car_type}}
+
+Customer: {{customer_name}}
+Contact: {{customer_mobile}}
+
+Please confirm after receiving this trip detail.
+
+Thank you.`;
+
 export function renderBookingMessage(
   booking: WhatsAppBooking,
   template?: WhatsappTemplate | null,
 ) {
-  const tpl =
-    template ?? getDefaultTemplate("booking_confirm");
-  if (!tpl) return "";
-  return renderTemplate(tpl.body, buildBookingVars(booking));
+  const body =
+    template?.body ??
+    getDefaultTemplate("booking_confirm")?.body ??
+    FALLBACK_BOOKING_CONFIRM_BODY;
+  return renderTemplate(body, buildBookingVars(booking));
 }
 
 export function renderAssignCustomerMessage(
   booking: AssignBooking,
   template?: WhatsappTemplate | null,
 ) {
-  const tpl = template ?? getDefaultTemplate("assign_customer");
-  if (!tpl) return "";
-  return renderTemplate(tpl.body, buildAssignCustomerVars(booking));
+  const body =
+    template?.body ??
+    getDefaultTemplate("assign_customer")?.body ??
+    FALLBACK_ASSIGN_CUSTOMER_BODY;
+  return renderTemplate(body, buildAssignCustomerVars(booking));
 }
 
 export function renderDriverMessage(
@@ -274,9 +359,11 @@ export function renderDriverMessage(
   lineIndex = 0,
   template?: WhatsappTemplate | null,
 ) {
-  const tpl = template ?? getDefaultTemplate("assign_driver");
-  if (!tpl) return "";
-  return renderTemplate(tpl.body, buildDriverVars(booking, lineIndex));
+  const body =
+    template?.body ??
+    getDefaultTemplate("assign_driver")?.body ??
+    FALLBACK_ASSIGN_DRIVER_BODY;
+  return renderTemplate(body, buildDriverVars(booking, lineIndex));
 }
 
 export const SAMPLE_BOOKING_VARS: Record<string, string> = {
