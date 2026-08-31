@@ -112,23 +112,23 @@ export function formatShortDate(value?: string | Date | null) {
   return d.format("DD/MM/YYYY");
 }
 
-/** Naive MySQL datetime in Asia/Kolkata wall clock (no UTC shift). */
+/** Convert Asia/Kolkata wall clock date+time to standard UTC ISO string for backend persistence. */
 export function combinePickupDateTime(
   date: string,
-  time: { hour: string; minute: string; period: "AM" | "PM" },
+  time?: { hour?: string; minute?: string; period?: "AM" | "PM" } | null,
 ) {
   if (!date) return date;
-  let h = Number(time.hour) || 12;
-  if (time.period === "AM") {
+  let h = Number(time?.hour) || 12;
+  if (time?.period === "AM") {
     if (h === 12) h = 0;
   } else if (h !== 12) {
     h += 12;
   }
   const hh = String(h).padStart(2, "0");
-  const mm = time.minute.padStart(2, "0");
+  const mm = String(time?.minute || "00").padStart(2, "0");
   return dayjs
     .tz(`${date} ${hh}:${mm}:00`, MYSQL_FMT, TZ)
-    .format(MYSQL_FMT);
+    .toISOString();
 }
 
 export function splitPickupDateTime(value?: string | null): {
