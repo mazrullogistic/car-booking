@@ -12,6 +12,7 @@ import {
   formatDate,
   formatDateTime,
   formatMoney,
+  pickupTimestamp,
   statusBadgeClass,
 } from "@/lib/services";
 
@@ -73,8 +74,7 @@ function getDateBounds(range: Exclude<DateRangeFilter, "all">) {
 
 function sortByLatestPickup(rows: BookingSummary[]) {
   return [...rows].sort(
-    (a, b) =>
-      new Date(b.pickup_date).getTime() - new Date(a.pickup_date).getTime(),
+    (a, b) => pickupTimestamp(b.pickup_date) - pickupTimestamp(a.pickup_date),
   );
 }
 

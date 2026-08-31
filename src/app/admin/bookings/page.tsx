@@ -17,7 +17,7 @@ import {
   bookingsApi,
   buildBookingWhatsAppMessage,
   capitalizeStatus,
-  formatDate,
+  formatDateTime,
   formatMoney,
   openWhatsAppShare,
   statusApi,
@@ -137,7 +137,7 @@ export default function BookingsPage() {
     {
       key: "pickup_date",
       header: "Pickup",
-      render: (row) => formatDate(row.pickup_date),
+      render: (row) => formatDateTime(row.pickup_date),
     },
     {
       key: "status",
